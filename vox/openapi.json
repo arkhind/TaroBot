@@ -1,0 +1,2154 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "VOX-LAB API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/ai_analytics/{subject}/{subject_id}": {
+      "get": {
+        "summary": "Ai Analytics",
+        "operationId": "ai_analytics_ai_analytics__subject___subject_id__get",
+        "parameters": [
+          {
+            "name": "subject",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Subject"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model"
+            }
+          },
+          {
+            "name": "no_cache",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "No Cache"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AIAnalytics"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EmptyResponse"
+                    }
+                  ],
+                  "title": "Response Ai Analytics Ai Analytics  Subject   Subject Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/ai_analytics/custom/{subject}/{subject_id}": {
+      "get": {
+        "summary": "Custom Report",
+        "operationId": "custom_report_ai_analytics_custom__subject___subject_id__get",
+        "parameters": [
+          {
+            "name": "subject",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Subject"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "custom_prompt",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Custom Prompt"
+            }
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AIAnalytics"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EmptyResponse"
+                    }
+                  ],
+                  "title": "Response Custom Report Ai Analytics Custom  Subject   Subject Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/ai_analytics/{subject}/cosine_similarity/{subject_id_1}/{subject_id_2}": {
+      "get": {
+        "summary": "Cosine Similarity",
+        "operationId": "cosine_similarity_ai_analytics__subject__cosine_similarity__subject_id_1___subject_id_2__get",
+        "parameters": [
+          {
+            "name": "subject",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Subject"
+            }
+          },
+          {
+            "name": "subject_id_1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Subject Id 1"
+            }
+          },
+          {
+            "name": "subject_id_2",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Subject Id 2"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/CosineSimilarityResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EmptyResponse"
+                    }
+                  ],
+                  "title": "Response Cosine Similarity Ai Analytics  Subject  Cosine Similarity  Subject Id 1   Subject Id 2  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/reports/user/{user_id}/fast": {
+      "get": {
+        "summary": "Fast Report",
+        "operationId": "fast_report_reports_user__user_id__fast_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FastReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/reports/user/{user_id}": {
+      "get": {
+        "summary": "Report For User",
+        "operationId": "report_for_user_reports_user__user_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserStructuredReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/search/ai/users": {
+      "get": {
+        "summary": "Search Users",
+        "operationId": "search_users_search_ai_users_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000,
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloseUsers"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/search/ai/raw/{subject}": {
+      "get": {
+        "summary": "Search Raw",
+        "operationId": "search_raw_search_ai_raw__subject__get",
+        "parameters": [
+          {
+            "name": "subject",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Subject"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000,
+              "title": "Query"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AIAnalytics"
+                  },
+                  "title": "Response Search Raw Search Ai Raw  Subject  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/search/ai/users/activity": {
+      "get": {
+        "tags": [
+          "experimental"
+        ],
+        "summary": "Search Users By Activity",
+        "description": "Search for users by activity in thematic groups in a given date range.\nMax limit is 1000 users.",
+        "operationId": "search_users_by_activity_search_ai_users_activity_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Query"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "End Date"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 1000,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserActivity"
+                  },
+                  "title": "Response Search Users By Activity Search Ai Users Activity Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/activity/hourly": {
+      "get": {
+        "summary": "Get User Activity Hourly",
+        "operationId": "get_user_activity_hourly_users__user_id__activity_hourly_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivitiesHourly"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/activity/weekly": {
+      "get": {
+        "summary": "Get User Activity Weekly",
+        "operationId": "get_user_activity_weekly_users__user_id__activity_weekly_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivitiesWeekly"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/activity/total": {
+      "get": {
+        "summary": "Get User Activity Total",
+        "operationId": "get_user_activity_total_users__user_id__activity_total_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivitiesTotal"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/language": {
+      "get": {
+        "summary": "Get User Language",
+        "operationId": "get_user_language_users__user_id__language_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserLanguageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/gender": {
+      "get": {
+        "summary": "Get User Gender",
+        "operationId": "get_user_gender_users__user_id__gender_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenderResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/compact": {
+      "get": {
+        "summary": "Get User Compact",
+        "operationId": "get_user_compact_users__user_id__compact_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompactResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/names": {
+      "get": {
+        "summary": "Get User Names",
+        "operationId": "get_user_names_users__user_id__names_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserNameAlias"
+                  },
+                  "title": "Response Get User Names Users  User Id  Names Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/users/username/{username}": {
+      "get": {
+        "summary": "Get User Id",
+        "operationId": "get_user_id_users_username__username__get",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserID"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/registration": {
+      "get": {
+        "summary": "Get Registration Date",
+        "operationId": "get_registration_date_users__user_id__registration_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRegistrationDate"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/profile": {
+      "get": {
+        "summary": "Get User Profile",
+        "operationId": "get_user_profile_users__user_id__profile_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/groups/{group_id}": {
+      "get": {
+        "summary": "Get Group",
+        "operationId": "get_group_groups__group_id__get",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Group"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/groups/{group_id}/messages": {
+      "get": {
+        "summary": "Group Posts",
+        "operationId": "group_posts_groups__group_id__messages_get",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "messages_limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Messages Limit"
+            }
+          },
+          {
+            "name": "messages_min",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Messages Min"
+            }
+          },
+          {
+            "name": "members_min",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Members Min"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/GroupReport"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Group Posts Groups  Group Id  Messages Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthMiddleware": []
+          }
+        ]
+      }
+    },
+    "/ping": {
+      "get": {
+        "summary": "Ping",
+        "operationId": "ping_ping_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "title": "Response Ping Ping Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AIAnalytics": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/Subject"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "message_count": {
+            "type": "integer",
+            "title": "Message Count",
+            "default": 0
+          },
+          "report": {
+            "type": "string",
+            "title": "Report",
+            "default": ""
+          },
+          "embedding": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Embedding",
+            "default": []
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Date",
+            "default": "1970-01-01T00:00:00Z"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "id"
+        ],
+        "title": "AIAnalytics"
+      },
+      "ActionType": {
+        "type": "string",
+        "enum": [
+          "message",
+          "reaction"
+        ],
+        "title": "ActionType"
+      },
+      "ActivitiesHourly": {
+        "properties": {
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityHourly"
+            },
+            "type": "array",
+            "maxItems": 24,
+            "minItems": 24,
+            "title": "Activities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "activities"
+        ],
+        "title": "ActivitiesHourly"
+      },
+      "ActivitiesTotal": {
+        "properties": {
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/Activity"
+            },
+            "type": "array",
+            "title": "Activities",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "ActivitiesTotal"
+      },
+      "ActivitiesWeekly": {
+        "properties": {
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityWeekly"
+            },
+            "type": "array",
+            "maxItems": 7,
+            "minItems": 7,
+            "title": "Activities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "activities"
+        ],
+        "title": "ActivitiesWeekly"
+      },
+      "Activity": {
+        "properties": {
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
+          "group_id": {
+            "type": "integer",
+            "title": "Group Id"
+          },
+          "group_name": {
+            "type": "string",
+            "title": "Group Name"
+          },
+          "related_group_name": {
+            "type": "string",
+            "title": "Related Group Name"
+          },
+          "related_group_id": {
+            "type": "integer",
+            "title": "Related Group Id"
+          },
+          "messages_count": {
+            "type": "integer",
+            "title": "Messages Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "group_id",
+          "group_name",
+          "related_group_name",
+          "related_group_id",
+          "messages_count"
+        ],
+        "title": "Activity"
+      },
+      "ActivityHourly": {
+        "properties": {
+          "hour": {
+            "type": "integer",
+            "title": "Hour"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hour",
+          "count"
+        ],
+        "title": "ActivityHourly"
+      },
+      "ActivityWeekly": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "title": "Day"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "count"
+        ],
+        "title": "ActivityWeekly"
+      },
+      "CloseUser": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "alias": {
+            "type": "string",
+            "title": "Alias"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "report": {
+            "type": "string",
+            "title": "Report"
+          },
+          "message_url": {
+            "type": "string",
+            "title": "Message Url"
+          },
+          "channel_url": {
+            "type": "string",
+            "title": "Channel Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "alias",
+          "name",
+          "report",
+          "message_url",
+          "channel_url"
+        ],
+        "title": "CloseUser"
+      },
+      "CloseUsers": {
+        "properties": {
+          "close_users": {
+            "items": {
+              "$ref": "#/components/schemas/CloseUser"
+            },
+            "type": "array",
+            "title": "Close Users"
+          }
+        },
+        "type": "object",
+        "required": [
+          "close_users"
+        ],
+        "title": "CloseUsers"
+      },
+      "CompactResponse": {
+        "properties": {
+          "language_response": {
+            "$ref": "#/components/schemas/UserLanguageResponse"
+          },
+          "gender_response": {
+            "$ref": "#/components/schemas/GenderResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "language_response",
+          "gender_response"
+        ],
+        "title": "CompactResponse"
+      },
+      "ContentType": {
+        "type": "string",
+        "enum": [
+          "TEXT",
+          "MEDIA",
+          "POLL",
+          "STICKER",
+          "VOICE",
+          "FILE",
+          "CONTACT",
+          "GEO",
+          "VIDEO"
+        ],
+        "title": "ContentType"
+      },
+      "CosineSimilarityResponse": {
+        "properties": {
+          "cosine_similarity": {
+            "type": "number",
+            "title": "Cosine Similarity",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "CosineSimilarityResponse"
+      },
+      "EmptyResponse": {
+        "properties": {
+
+        },
+        "type": "object",
+        "title": "EmptyResponse"
+      },
+      "FastGroupTag": {
+        "properties": {
+          "group_name": {
+            "type": "string",
+            "title": "Group Name",
+            "description": "The name of the group that categorises the specific subset of tags. !Can only be one of \nGeography & Regions\nCulture & Traditions\nLanguages\nGames & Gaming\nTechnology & Apps\nEmotions & Mood\nEducation & Exams\nFitness & Health\nRelationships & Dating\nContests & Giveaways\nSubcultures & Fandoms\nSocial Media & Influence\nReligion & Spirituality\nFantasy & Fiction\nPsychology & Emotions\nCreative Arts\nNews & Announcements\nCommunity & Communication\nRole & Identity\nFashion & Appearance\nMusic & Performance\nHolidays & Events\nDigital Media\nRatings & Feedback\nSales & Commerce\nAdvertising & Promotion\nMagic & Esotericism\nMigration & Emigration\nNational Identity\nPolitics & Society\nPersonal Growth\nFolklore & Mythology\nHumor & Satire\nSelf-expression\nLearning & Development\nSurvey & Polling\nHate & Abuse\nQuizzes & Testing\nPerformance & Arts\nPets & Animals\nFantasy Races & Worlds\nTechnology Personalities\nStudent Life\nSocial Behavior\nDigital Practices\nCommunity Engagement\nBody & Physicality\nGaming Platforms\nContemporary Trends\nAdult content\n!"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "description": "The tags that fits into tag group description above (group_name)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_name",
+          "tags"
+        ],
+        "title": "FastGroupTag"
+      },
+      "FastReport": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "interests": {
+            "items": {
+              "$ref": "#/components/schemas/FastGroupTag"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "countries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Countries"
+          },
+          "cities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "interests",
+          "countries",
+          "cities"
+        ],
+        "title": "FastReport"
+      },
+      "GenderResponse": {
+        "properties": {
+          "gender": {
+            "type": "string",
+            "title": "Gender"
+          },
+          "probability": {
+            "type": "number",
+            "title": "Probability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "gender",
+          "probability"
+        ],
+        "title": "GenderResponse"
+      },
+      "Group": {
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "alias": {
+            "type": "string",
+            "title": "Alias",
+            "default": ""
+          },
+          "related_group": {
+            "type": "integer",
+            "title": "Related Group",
+            "default": 0
+          },
+          "server_id": {
+            "type": "string",
+            "title": "Server Id",
+            "default": ""
+          },
+          "access_hash": {
+            "type": "integer",
+            "title": "Access Hash",
+            "default": 0
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Type"
+              }
+            ],
+            "default": "PRIVATE"
+          },
+          "is_private": {
+            "type": "boolean",
+            "title": "Is Private",
+            "default": false
+          },
+          "added": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Added",
+            "default": "1970-01-01T00:00:00Z"
+          },
+          "members_count": {
+            "type": "integer",
+            "title": "Members Count",
+            "default": 0
+          },
+          "about": {
+            "type": "string",
+            "title": "About",
+            "default": ""
+          },
+          "from_group": {
+            "type": "integer",
+            "title": "From Group",
+            "default": 0
+          },
+          "from_message": {
+            "type": "integer",
+            "title": "From Message",
+            "default": 0
+          },
+          "bot_index": {
+            "type": "integer",
+            "title": "Bot Index",
+            "default": 0
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 0
+          },
+          "bot_name": {
+            "type": "string",
+            "title": "Bot Name",
+            "default": ""
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "id"
+        ],
+        "title": "Group"
+      },
+      "GroupReport": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "message_count": {
+            "type": "integer",
+            "title": "Message Count",
+            "default": 0
+          },
+          "posts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Posts",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "GroupReport"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Source": {
+        "type": "string",
+        "enum": [
+          "TELEGRAM",
+          "SLACK",
+          "HN",
+          "NONE"
+        ],
+        "title": "Source"
+      },
+      "Subject": {
+        "type": "string",
+        "enum": [
+          "USER",
+          "GROUP"
+        ],
+        "title": "Subject"
+      },
+      "Type": {
+        "type": "string",
+        "enum": [
+          "CHAT",
+          "CHANNEL",
+          "PRIVATE"
+        ],
+        "title": "Type"
+      },
+      "UserActivity": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "alias": {
+            "type": "string",
+            "title": "Alias"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "frequency": {
+            "type": "number",
+            "title": "Frequency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "alias",
+          "name",
+          "frequency"
+        ],
+        "title": "UserActivity"
+      },
+      "UserBelief": {
+        "properties": {
+          "belief": {
+            "type": "string",
+            "title": "Belief",
+            "description": "The name of the political or ideological belief. (e.g. \"Islam\", \"Liberalism\", or \"Platonism\")"
+          },
+          "sub_beliefs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sub Beliefs",
+            "description": "A list of sub-beliefs of this belief. (e.g. [\"Navalny supporter\", \"Alt-right\", \"Shia Islam\", \"Pro-choice\"])"
+          },
+          "probability": {
+            "type": "number",
+            "title": "Probability",
+            "description": "The probability that the user has this belief."
+          }
+        },
+        "type": "object",
+        "required": [
+          "belief",
+          "sub_beliefs",
+          "probability"
+        ],
+        "title": "UserBelief"
+      },
+      "UserID": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "UserID"
+      },
+      "UserInterest": {
+        "properties": {
+          "interest": {
+            "type": "string",
+            "title": "Interest",
+            "description": "The name of the interest. (e.g. \"Sport\")"
+          },
+          "sub_interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sub Interests",
+            "description": "A list of sub-interests of this interest. (e.g. [\"Hockey\", \"Football\"])"
+          },
+          "probability": {
+            "type": "number",
+            "title": "Probability",
+            "description": "The probability that the user has this interest."
+          }
+        },
+        "type": "object",
+        "required": [
+          "interest",
+          "sub_interests",
+          "probability"
+        ],
+        "title": "UserInterest"
+      },
+      "UserLanguageResponse": {
+        "properties": {
+          "language": {
+            "type": "string",
+            "title": "Language"
+          }
+        },
+        "type": "object",
+        "required": [
+          "language"
+        ],
+        "title": "UserLanguageResponse"
+      },
+      "UserNameAlias": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "alias": {
+            "type": "string",
+            "title": "Alias"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "alias"
+        ],
+        "title": "UserNameAlias"
+      },
+      "UserProfile": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "alias": {
+            "type": "string",
+            "title": "Alias"
+          },
+          "about": {
+            "type": "string",
+            "title": "About",
+            "default": ""
+          },
+          "account_age": {
+            "type": "number",
+            "title": "Account Age",
+            "default": 0
+          },
+          "pic": {
+            "type": "string",
+            "title": "Pic",
+            "default": ""
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/UserProfileGroup"
+            },
+            "type": "array",
+            "title": "Groups",
+            "default": []
+          },
+          "actions": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/UserProfileActionMessage"
+                },
+                {
+                  "$ref": "#/components/schemas/UserProfileReaction"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Actions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name",
+          "alias"
+        ],
+        "title": "UserProfile"
+      },
+      "UserProfileActionMessage": {
+        "properties": {
+          "group_id": {
+            "type": "integer",
+            "title": "Group Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Date"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActionType"
+              }
+            ],
+            "default": "message"
+          },
+          "content": {
+            "$ref": "#/components/schemas/UserProfileMessageContent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_id",
+          "date",
+          "content"
+        ],
+        "title": "UserProfileActionMessage"
+      },
+      "UserProfileGroup": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "about": {
+            "type": "string",
+            "title": "About",
+            "default": ""
+          },
+          "members_count": {
+            "type": "integer",
+            "title": "Members Count",
+            "default": 0
+          },
+          "alias": {
+            "type": "string",
+            "title": "Alias",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "UserProfileGroup"
+      },
+      "UserProfileMessageContent": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "content_type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContentType"
+              }
+            ],
+            "default": "TEXT"
+          },
+          "reactions": {
+            "items": {
+              "$ref": "#/components/schemas/UserProfileReaction"
+            },
+            "type": "array",
+            "title": "Reactions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "UserProfileMessageContent"
+      },
+      "UserProfileReaction": {
+        "properties": {
+          "emoji": {
+            "type": "string",
+            "title": "Emoji"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "emoji",
+          "count"
+        ],
+        "title": "UserProfileReaction"
+      },
+      "UserRegistrationDate": {
+        "properties": {
+          "bucket": {
+            "type": "integer",
+            "title": "Bucket"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucket",
+          "date"
+        ],
+        "title": "UserRegistrationDate"
+      },
+      "UserStructuredReport": {
+        "properties": {
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "The main language of the user. Only use ISO 639-1 alpha-2 language codes (e.g. \"en\")! If language is unknown, say \"un\""
+          },
+          "sex": {
+            "type": "string",
+            "enum": [
+              "male",
+              "female"
+            ],
+            "title": "Sex",
+            "description": "The assumed sex of the user. Male or Female. (e.g. \"male\")"
+          },
+          "age_range": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Age Range",
+            "description": "The age range of the user. The first element is the minimum age, the second is the maximum age. (e.g. [20, 25])"
+          },
+          "income_range": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Income Range",
+            "description": "The income range of the user, in USD per year. The first element is the minimum estimated income, the second is the maximum estimated income. (e.g. [30000, 50000])"
+          },
+          "occupation": {
+            "type": "string",
+            "title": "Occupation",
+            "description": "The occupation of the user. (e.g. \"Software Engineer\")"
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Locations",
+            "description": "The most likely places of residence of the user. Keep empty if unknown. (e.g. [\"Moscow\", \"Russia\"])"
+          },
+          "is_bot": {
+            "type": "boolean",
+            "title": "Is Bot",
+            "description": "Whether the user is a bot or not. (e.g. false)",
+            "default": false
+          },
+          "beliefs": {
+            "items": {
+              "$ref": "#/components/schemas/UserBelief"
+            },
+            "type": "array",
+            "title": "Beliefs",
+            "description": "The political and ideological beliefs of the user. Keep empty if unknown.",
+            "default": []
+          },
+          "interests": {
+            "items": {
+              "$ref": "#/components/schemas/UserInterest"
+            },
+            "type": "array",
+            "title": "Interests",
+            "description": "The interests of the user."
+          },
+          "left_right": {
+            "type": "integer",
+            "title": "Left Right",
+            "description": "Position on the political compass. From -10 (far-left) to 10 (far-right)",
+            "default": 0
+          },
+          "authoritarian_libertarian": {
+            "type": "integer",
+            "title": "Authoritarian Libertarian",
+            "description": "Position on the political compass. From -10 (libertarian) to 10 (authoritarian)",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "language",
+          "sex",
+          "age_range",
+          "income_range",
+          "occupation",
+          "locations",
+          "interests"
+        ],
+        "title": "UserStructuredReport"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "AuthMiddleware": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "sso-jwt"
+      }
+    }
+  },
+  "security": [
+    {
+      "AuthMiddleware": []
+    }
+  ]
+}
