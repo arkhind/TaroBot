@@ -1,27 +1,28 @@
-import logging
-import os
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import CommandStart
+from aiogram.types import Message
+from loguru import logger
 from dotenv import load_dotenv
-
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+import os
+import asyncio
 
 load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Привет')
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
+logger.add("bot.log", format="{time} {level} {message}", level="INFO")
 
-def main():
+@dp.message(CommandStart())
+async def start_handler(message: Message):
+    await message.answer("Привет")
+
+async def main():
     if not BOT_TOKEN:
-        logging.error('BOT_TOKEN не найден в .env')
+        logger.error('BOT_TOKEN не найден в .env')
         return
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler('start', start))
-    app.run_polling()
+    logger.info('Бот запущен')
+    await dp.start_polling(bot)
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    asyncio.run(main())
