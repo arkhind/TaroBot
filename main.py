@@ -1,6 +1,6 @@
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ParseMode
 from loguru import logger
 from dotenv import load_dotenv
 import os
@@ -10,6 +10,12 @@ from vox_example import process_user_nickname
 
 load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN')
+
+answer_prompt_ = "".join(open("prompts/answer_prompt").readlines())
+compatibility_prompt_ = "".join(open("prompts/compatibility_prompt").readlines())
+prediction_prompt_ = "".join(open("prompts/prediction_prompt").readlines())
+qualities_prompt_ = "".join(open("prompts/qualities_prompt").readlines())
+yes_no_prompt_ = "".join(open("prompts/yes_no_prompt").readlines())
 
 bot = None
 dp = Dispatcher()
@@ -53,10 +59,9 @@ async def handle_buttons(message: Message):
             await message.answer("Не удалось получить ваш никнейм. Пожалуйста, установите его в настройках Telegram.")
             return
 
-        report = process_user_nickname(nickname)
+        report = process_user_nickname(nickname, prediction_prompt_)
         if report:
-            formatted_report = report.replace('**', '*')
-            await message.answer(formatted_report, parse_mode="Markdown")
+            await message.answer(report, parse_mode=ParseMode.MARKDOWN)
         else:
             await message.answer("Не удалось получить предсказание. Попробуйте позже.")
 
