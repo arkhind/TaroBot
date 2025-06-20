@@ -3,7 +3,6 @@ from vox.models import Subject
 from dotenv import load_dotenv
 import os
 import json
-from get_username import get_current_username
 
 load_dotenv()
 

@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import os
 import sys
 import asyncio
-from get_username import get_current_username
 from vox_example import process_user_nickname
 
 load_dotenv()
@@ -16,6 +15,14 @@ bot = None
 dp = Dispatcher()
 logger.remove()
 logger.add(sys.stdout, format="{time} {level} {message}", level="INFO", colorize=True)
+
+def get_current_username(message: Message) -> str | None:
+    """
+    Получает никнейм пользователя Telegram из объекта message.
+    """
+    if message.from_user:
+        return message.from_user.username
+    return None
 
 @dp.message(CommandStart())
 async def start_handler(message: Message):
@@ -39,12 +46,7 @@ async def compatibility_handler(message: Message):
 @dp.message()
 async def handle_buttons(message: Message):
     if message.text == "Да/Нет":
-        user_id = message.from_user.id if message.from_user else None
-        if user_id is not None:
-            data = get_user_data(user_id)
-            await message.answer(f"да\nДанные: {data}")
-        else:
-            await message.answer("Не удалось определить пользователя.")
+        await message.answer("Функционал 'Да/Нет' временно недоступен.")
     elif message.text == "Предсказание на день":
         nickname = get_current_username(message)
         if not nickname:
