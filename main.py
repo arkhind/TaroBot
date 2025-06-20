@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import os
 import sys
 import asyncio
-from vox.YesNo import get_user_data
 from get_username import get_current_username
 from vox_example import process_user_nickname
 
