@@ -1,7 +1,7 @@
 # src/vox_wrapper/client.py
 
 import requests
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Any
 from .exceptions import (
     AuthenticationError,
     ValidationError,
@@ -10,6 +10,7 @@ from .exceptions import (
     ApiError,
 )
 from .models import (  # импорт моделей
+    Subject,
     AIAnalytics,
     EmptyResponse,
     CosineSimilarityResponse,
@@ -69,7 +70,7 @@ class VoxAPI:
     # —— AI Analytics ——
     def ai_analytics(
         self,
-        subject: str,
+        subject: Subject,
         subject_id: int,
         model: Optional[str] = None,
         no_cache: bool = False,
@@ -81,13 +82,13 @@ class VoxAPI:
             params["no_cache"] = True
         return self._request(
             "GET",
-            f"/ai_analytics/{subject}/{subject_id}",
+            f"/ai_analytics/{subject.name}/{subject_id}",
             params=params,
         )
 
     def custom_report(
         self,
-        subject: str,
+        subject: Subject,
         subject_id: int,
         custom_prompt: str,
         model: Optional[str] = None,
@@ -97,19 +98,19 @@ class VoxAPI:
             params["model"] = model
         return self._request(
             "GET",
-            f"/ai_analytics/custom/{subject}/{subject_id}",
+            f"/ai_analytics/custom/{subject.name}/{subject_id}",
             params=params,
         )
 
     def cosine_similarity(
         self,
-        subject: str,
+        subject: Subject,
         subject_id_1: int,
         subject_id_2: int,
     ) -> Union[CosineSimilarityResponse, EmptyResponse]:
         return self._request(
             "GET",
-            f"/ai_analytics/{subject}/cosine_similarity/{subject_id_1}/{subject_id_2}",
+            f"/ai_analytics/{subject.name}/cosine_similarity/{subject_id_1}/{subject_id_2}",
         )
 
     # —— Reports for user ——
@@ -135,7 +136,7 @@ class VoxAPI:
 
     def search_raw(
         self,
-        subject: str,
+        subject: Subject,
         query: str,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
@@ -145,7 +146,7 @@ class VoxAPI:
             params["limit"] = limit
         if offset is not None:
             params["offset"] = offset
-        return self._request("GET", f"/search/ai/raw/{subject}", params=params)
+        return self._request("GET", f"/search/ai/raw/{subject.name}", params=params)
 
     def search_users_by_activity(
         self,
@@ -156,7 +157,7 @@ class VoxAPI:
     ) -> List[UserActivity]:
         params = {"query": query, "start_date": start_date, "end_date": end_date}
         if limit is not None:
-            params["limit"] = limit
+            params["limit"] = str(limit)
         return self._request("GET", "/search/ai/users/activity", params=params)
 
     # —— User activity endpoints ——
