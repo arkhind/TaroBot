@@ -24,24 +24,25 @@ def process_user_nickname(nickname, prompt):
         logger.error(f'Error in process_user_nickname: {e}')
     return None
 
-def process_user_nicknames(nickname_user, nickname_find, prompt):
+def process_user_nicknames(from_user, about_user, prompt):
     try:
-        user_id = vox.get_user_id(nickname_user)['id']
-        ai_analytic_user = vox.ai_analytics(subject=Subject.USER, subject_id=user_id)
-        if 'report' in ai_analytic_user:
-            ai_analytic_user = ai_analytic_user['report']
+        from_user_id = vox.get_user_id(from_user)['id']
+        airep_from_user = vox.ai_analytics(subject=Subject.USER, subject_id=from_user_id)
+        if 'report' in airep_from_user:
+            airep_from_user = airep_from_user['report']
 
-        find_id = vox.get_user_id(nickname_find)['id']
-        ai_analytic_find = vox.ai_analytics(subject=Subject.USER, subject_id=find_id)
-        if 'report' in ai_analytic_find:
-            ai_analytic_find = ai_analytic_find['report']
+        about_user_id = vox.get_user_id(about_user)['id']
+        airep_about_user = vox.ai_analytics(subject=Subject.USER, subject_id=about_user_id)
+        if 'report' in airep_about_user:
+            airep_about_user = airep_about_user['report']
 
-        report = vox.custom_report(subject=Subject.USER, subject_id=user_id,
-                                   custom_prompt=f"Пользователь:\n{str(ai_analytic_user)}\n\n{nickname_find}:\n{str(ai_analytic_find)}\n\n{prompt}")
+        report = vox.custom_report(subject=Subject.USER, subject_id=about_user_id,
+                                   custom_prompt=f"Пользователь {from_user}\n{str(airep_from_user)}\n\n" +\
+                                                 f"Спросил о {about_user}\n{str(airep_about_user)}\n\n{prompt}")
         if 'report' in report:
             report_data = json.loads(report['report'])
             if 'report' in report_data:
-                logger.info(report_data['report'])
+                # logger.info(report_data['report'])
                 return report_data['report']
     except Exception as e:
         logger.error(f"Error occurred in process_user_nicknames: {e}")

@@ -9,7 +9,7 @@ from loguru import logger
 from config import BOT_TOKEN
 import sys
 import asyncio
-from vox_example import process_user_nickname, process_user_nicknames
+from vox_executable import process_user_nickname, process_user_nicknames
 from keyboards import main_menu
 
 # Загружаем промпты
