@@ -75,8 +75,8 @@ async def handle_callback_query(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("🔮 Отправьте аккаунт другого человека (@nickname):")
     elif callback.data == "prediction":
         # Прямое предсказание без доп. ввода
-        await callback.message.bot.send_chat_action(callback.message.chat.id, ChatAction.TYPING)
         loading = await callback.message.answer(get_phrase())
+        await callback.message.bot.send_chat_action(callback.message.chat.id, ChatAction.TYPING)
         try:
             report = await process_user_nickname(vox, nickname, prediction_prompt_)
             if report:
@@ -92,8 +92,8 @@ async def process_question(message: Message, state: FSMContext):
     user_nick = get_current_username(message)
     question = message.text.strip()
     await state.clear()
-    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     loading = await message.answer(get_phrase())
+    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
         prompt = f"Вопрос: {question}" + answers_prompt_
         report = await process_user_nickname(vox, user_nick, prompt)
@@ -107,8 +107,8 @@ async def process_yes_no(message: Message, state: FSMContext):
     user_nick = get_current_username(message)
     question = message.text.strip()
     await state.clear()
-    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     loading = await message.answer(get_phrase())
+    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
         prompt = f"Вопрос: {question}" + yes_no_prompt_
         report = await process_user_nickname(vox, user_nick, prompt)
@@ -125,8 +125,8 @@ async def process_compatibility(message: Message, state: FSMContext):
         await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
         return
     await state.clear()
-    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     loading = await message.answer(get_phrase())
+    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
         report = await process_user_nicknames(vox, user_nick, target[1:], compatibility_prompt_)
         await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
@@ -142,8 +142,8 @@ async def process_qualities(message: Message, state: FSMContext):
         await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
         return
     await state.clear()
-    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     loading = await message.answer(get_phrase())
+    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
         report = await process_user_nicknames(vox, user_nick, target[1:], qualities_prompt_)
         await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
