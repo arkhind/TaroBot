@@ -10,7 +10,7 @@ def _process_report_lines(report_str: str) -> str:
     lines = report_str.split('\n')
     processed_lines = []
     for line in lines:
-        if line.strip().startswith('*'):
+        if line.strip().startswith('* '):
             first_star_index = line.find('*')
             if first_star_index != -1:
                 line = line[:first_star_index] + '-' + line[first_star_index+1:]
@@ -37,6 +37,7 @@ def process_user_nickname(nickname, prompt):
     return None
 
 def process_user_nicknames(from_user, about_user, prompt):
+    logger.info(f'run process_user_nicknames for {from_user} about {about_user}; prompt:\n{prompt}')
     try:
         from_user_id = vox.get_user_id(from_user)['id']
         airep_from_user = vox.ai_analytics(subject=Subject.USER, subject_id=from_user_id)
@@ -56,7 +57,10 @@ def process_user_nicknames(from_user, about_user, prompt):
             if 'report' in report:
                 # logger.info(report_data['report'])
                 report = report['report']
-                return _process_report_lines(report)
+                logger.info(report)
+                report = _process_report_lines(report)
+                logger.info(report)
+                return report
     except Exception as e:
         logger.error(f"Error occurred in process_user_nicknames: {e}")
     return None
