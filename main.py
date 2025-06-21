@@ -58,11 +58,18 @@ async def handle_callback_query(callback: CallbackQuery):
                 await callback.answer("Не удалось получить ваш никнейм. Пожалуйста, установите его в настройках Telegram.")
                 return
             
-            report = process_user_nickname(nickname, answers_prompt_)
-            if report:
-                await callback.message.answer(report, parse_mode=ParseMode.MARKDOWN)
-            else:
-                await callback.message.answer("Не удалось получить ответ. Попробуйте позже.")
+            # Отправляем сообщение о загрузке
+            loading_msg = await callback.message.answer("🔮Тусую колоду🔮")
+            
+            try:
+                report = process_user_nickname(nickname, answers_prompt_)
+                if report:
+                    # Редактируем сообщение с результатом
+                    await loading_msg.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+                else:
+                    await loading_msg.edit_text("Не удалось получить ответ. Попробуйте позже.")
+            except Exception as e:
+                await loading_msg.edit_text(f"Произошла ошибка: {str(e)}")
         else:
             await callback.message.answer("Функционал 'Ответы на вопросы' временно недоступен.")
     
@@ -73,11 +80,18 @@ async def handle_callback_query(callback: CallbackQuery):
                 await callback.answer("Не удалось получить ваш никнейм. Пожалуйста, установите его в настройках Telegram.")
                 return
             
-            report = process_user_nickname(nickname, yes_no_prompt_)
-            if report:
-                await callback.message.answer(report, parse_mode=ParseMode.MARKDOWN)
-            else:
-                await callback.message.answer("Не удалось получить ответ. Попробуйте позже.")
+            # Отправляем сообщение о загрузке
+            loading_msg = await callback.message.answer("🔮Тусую колоду🔮")
+            
+            try:
+                report = process_user_nickname(nickname, yes_no_prompt_)
+                if report:
+                    # Редактируем сообщение с результатом
+                    await loading_msg.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+                else:
+                    await loading_msg.edit_text("Не удалось получить ответ. Попробуйте позже.")
+            except Exception as e:
+                await loading_msg.edit_text(f"Произошла ошибка: {str(e)}")
         else:
             await callback.message.answer("Функционал 'Да/Нет' временно недоступен.")
     
@@ -88,11 +102,18 @@ async def handle_callback_query(callback: CallbackQuery):
                 await callback.answer("Не удалось получить ваш никнейм. Пожалуйста, установите его в настройках Telegram.")
                 return
             
-            report = process_user_nickname(nickname, compatibility_prompt_)
-            if report:
-                await callback.message.answer(report, parse_mode=ParseMode.MARKDOWN)
-            else:
-                await callback.message.answer("Не удалось получить анализ совместимости. Попробуйте позже.")
+            # Отправляем сообщение о загрузке
+            loading_msg = await callback.message.answer("🔮Тусую колоду🔮")
+            
+            try:
+                report = process_user_nickname(nickname, compatibility_prompt_)
+                if report:
+                    # Редактируем сообщение с результатом
+                    await loading_msg.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+                else:
+                    await loading_msg.edit_text("Не удалось получить анализ совместимости. Попробуйте позже.")
+            except Exception as e:
+                await loading_msg.edit_text(f"Произошла ошибка: {str(e)}")
         else:
             await callback.message.answer("Функционал 'Совместимость' временно недоступен.")
     
@@ -103,11 +124,18 @@ async def handle_callback_query(callback: CallbackQuery):
                 await callback.answer("Не удалось получить ваш никнейм. Пожалуйста, установите его в настройках Telegram.")
                 return
 
-            report = process_user_nickname(nickname, prediction_prompt_)
-            if report:
-                await callback.message.answer(report, parse_mode=ParseMode.MARKDOWN)
-            else:
-                await callback.message.answer("Не удалось получить предсказание. Попробуйте позже.")
+            # Отправляем сообщение о загрузке
+            loading_msg = await callback.message.answer("🔮Тусую колоду🔮")
+            
+            try:
+                report = process_user_nickname(nickname, prediction_prompt_)
+                if report:
+                    # Редактируем сообщение с результатом
+                    await loading_msg.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+                else:
+                    await loading_msg.edit_text("Не удалось получить предсказание. Попробуйте позже.")
+            except Exception as e:
+                await loading_msg.edit_text(f"Произошла ошибка: {str(e)}")
         else:
             await callback.message.answer("Функционал 'Предсказание на день' временно недоступен.")
     
@@ -118,11 +146,18 @@ async def handle_callback_query(callback: CallbackQuery):
                 await callback.answer("Не удалось получить ваш никнейм. Пожалуйста, установите его в настройках Telegram.")
                 return
             
-            report = process_user_nickname(nickname, qualities_prompt_)
-            if report:
-                await callback.message.answer(report, parse_mode=ParseMode.MARKDOWN)
-            else:
-                await callback.message.answer("Не удалось получить анализ качеств. Попробуйте позже.")
+            # Отправляем сообщение о загрузке
+            loading_msg = await callback.message.answer("🔮Тусую колоду🔮")
+            
+            try:
+                report = process_user_nickname(nickname, qualities_prompt_)
+                if report:
+                    # Редактируем сообщение с результатом
+                    await loading_msg.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+                else:
+                    await loading_msg.edit_text("Не удалось получить анализ качеств. Попробуйте позже.")
+            except Exception as e:
+                await loading_msg.edit_text(f"Произошла ошибка: {str(e)}")
         else:
             await callback.message.answer("Функционал 'Плохие и хорошие качества' временно недоступен.")
     

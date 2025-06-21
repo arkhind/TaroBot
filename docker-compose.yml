@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  tarobot:
+    build:
+      context: .
+      dockerfile: Dockerfile.pip
+    container_name: tarobot
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - VOX_TOKEN=${VOX_TOKEN}
+    volumes:
+      # Монтируем .env файл для переменных окружения
+      - ./.env:/app/.env:ro
+    networks:
+      - tarobot-network
+
+networks:
+  tarobot-network:
+    driver: bridge 
