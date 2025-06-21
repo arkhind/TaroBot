@@ -5,20 +5,19 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Копируем файлы зависимостей
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml .
+COPY uv.lock .
 
 # Устанавливаем uv для управления зависимостями
 RUN pip install uv
 
 # Устанавливаем зависимости
-RUN uv sync --frozen
+RUN uv sync
 
 # Копируем исходный код
 COPY . .
 
-# Создаем пользователя для безопасности
-RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
-USER app
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Запускаем бота
-CMD ["python", "main.py"] 
+CMD ["python", "main.py"]
