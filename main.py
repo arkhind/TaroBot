@@ -1,3 +1,7 @@
+import sys
+import asyncio
+from loguru import logger
+
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery
@@ -5,14 +9,15 @@ from aiogram.enums import ParseMode, ChatAction
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from loguru import logger
+
 from config import BOT_TOKEN, VOX_TOKEN
-import sys
-import asyncio
-from vox_executable import process_user_nickname, process_user_nicknames
-from vox.asyncapi import AsyncVoxAPI
 from keyboards import main_menu
+from vox_executable import process_user_nickname, process_user_nicknames
+from db.User import User
+from vox.asyncapi import AsyncVoxAPI
 from translations.get_phrase import get_phrase
+from utils.get_user_info import get_current_username, get_language
+from utils.login_requied import only_registered
 
 # Загружаем промпты
 answers_prompt_ = open("prompts/answers_prompt.txt").read()
@@ -38,24 +43,20 @@ dp = Dispatcher(storage=storage)
 logger.remove()
 logger.add(sys.stdout, format="{time} {level} {message}", level="INFO", colorize=True)
 
-# Утилита для получения никнейма
-
-
-def get_current_username(message: Message | CallbackQuery) -> str | None:
-    if isinstance(message, (Message, CallbackQuery)) and message.from_user:
-        return message.from_user.username
-    return None
-
-
-def get_language(message: Message | CallbackQuery | CallbackQuery) -> str | None:
-    if isinstance(message, (Message, CallbackQuery)) and message.from_user:
-        return message.from_user.language
-    return None
-
 
 @dp.message(CommandStart())
 async def start_handler(message: Message):
-    nickname = get_current_username(message)
+    assert message.from_user
+    user, created = await User.aio_get_or_create(
+        telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
+    )
+    nickname = message.from_user.username
+    if created:
+        ...
+        # Создали => новый пользователь
+    else:
+        ...
+        # Уже было создано => старый пользователь
     await message.answer(
         get_phrase(phrase_tag="menu", language=get_language(message)).format(
             nickname=nickname
