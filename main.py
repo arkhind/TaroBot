@@ -3,15 +3,12 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery
 from aiogram.enums import ParseMode
 from loguru import logger
-from dotenv import load_dotenv
-import os
+from config import BOT_TOKEN
 import sys
 import asyncio
 from vox_example import process_user_nickname
 from keyboards import main_menu
 
-load_dotenv()
-BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 answers_prompt_ = "".join(open("prompts/answers_prompt.txt").readlines())
 compatibility_prompt_ = "".join(open("prompts/compatibility_prompt.txt").readlines())

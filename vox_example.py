@@ -1,12 +1,9 @@
 from vox.api import VoxAPI
 from vox.models import Subject
-from dotenv import load_dotenv
-import os
 import json
+from config import VOX_TOKEN
 
-load_dotenv()
-
-vox = VoxAPI(token=os.getenv("VOX_TOKEN"))
+vox = VoxAPI(token=VOX_TOKEN)
 
 def process_user_nickname(nickname, prompt):
     try:
