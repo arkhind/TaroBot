@@ -6,6 +6,17 @@ from loguru import logger
 
 vox = VoxAPI(token=VOX_TOKEN)
 
+def _process_report_lines(report_str: str) -> str:
+    lines = report_str.split('\n')
+    processed_lines = []
+    for line in lines:
+        if line.strip().startswith('*'):
+            first_star_index = line.find('*')
+            if first_star_index != -1:
+                line = line[:first_star_index] + '-' + line[first_star_index+1:]
+        processed_lines.append(line)
+    return '\n'.join(processed_lines)
+
 def process_user_nickname(nickname, prompt):
     try:
         user_id = vox.get_user_id(nickname)['id']
@@ -17,9 +28,10 @@ def process_user_nickname(nickname, prompt):
         report = vox.custom_report(subject=Subject.USER, subject_id=user_id,
                                    custom_prompt=f"{str(ai_analytic)}\n\n{prompt}")
         if 'report' in report:
-            report_data = json.loads(report['report'])
-            if 'report' in report_data:
-                return report_data['report']
+            report = json.loads(report['report'])
+            if 'report' in report:
+                report = report['report']
+                return _process_report_lines(report)
     except Exception as e:
         logger.error(f'Error in process_user_nickname: {e}')
     return None
@@ -40,10 +52,11 @@ def process_user_nicknames(from_user, about_user, prompt):
                                    custom_prompt=f"Пользователь {from_user}\n{str(airep_from_user)}\n\n" +\
                                                  f"Спросил о {about_user}\n{str(airep_about_user)}\n\n{prompt}")
         if 'report' in report:
-            report_data = json.loads(report['report'])
-            if 'report' in report_data:
+            report = json.loads(report['report'])
+            if 'report' in report:
                 # logger.info(report_data['report'])
-                return report_data['report']
+                report = report['report']
+                return _process_report_lines(report)
     except Exception as e:
         logger.error(f"Error occurred in process_user_nicknames: {e}")
     return None
