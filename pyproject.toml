@@ -10,5 +10,6 @@ dependencies = [
     "loguru>=0.7.3",
     "peewee-async>=1.1.0",
     "pewee>=0.1.0.dev9",
+    "pyyaml>=6.0.2",
     "requests>=2.32.4",
 ]

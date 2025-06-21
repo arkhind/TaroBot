@@ -13,6 +13,7 @@ from vox_executable import process_user_nickname, process_user_nicknames
 from vox.asyncapi import AsyncVoxAPI
 from keyboards import main_menu
 import random
+from translations.get_phrase import get_phrase
 
 # Загружаем промпты
 answers_prompt_ = open("prompts/answers_prompt.txt").read()
@@ -20,11 +21,6 @@ yes_no_prompt_ = open("prompts/yes_no_prompt.txt").read()
 compatibility_prompt_ = open("prompts/compatibility_prompt.txt").read()
 qualities_prompt_ = open("prompts/qualities_prompt.txt").read()
 prediction_prompt_ = open("prompts/prediction_prompt.txt").read()
-
-phrases_think = open("phrases.txt").read().split('\n')
-
-def get_phrase():
-    return random.choice(phrases_think)
 
 # FSM состояния
 class BotStates(StatesGroup):
@@ -48,17 +44,23 @@ def get_current_username(message: Message | CallbackQuery) -> str | None:
         return message.from_user.username
     return None
 
+def get_language(message: Message | CallbackQuery | CallbackQuery) -> str | None:
+    if isinstance(message, (Message, CallbackQuery)) and message.from_user:
+        return message.from_user.language
+    return None
+
 @dp.message(CommandStart())
 async def start_handler(message: Message):
     nickname = get_current_username(message)
-    await message.answer(f"Опции:\nВаш никнейм: {nickname}", reply_markup=main_menu)
+    await message.answer(get_phrase(phrase_tag='menu', language=get_language(message)).format(nickname=nickname),
+                         reply_markup=main_menu)
 
 @dp.callback_query(lambda c: c.data in ["answers", "yes_no", "compatibility", "qualities", "prediction"])
 async def handle_callback_query(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     nickname = get_current_username(callback)
     if not nickname:
-        await callback.message.answer("Не удалось получить ваш никнейм. Установите его в настройках Telegram.")
+        await callback.message.answer(get_phrase(phrase_tag='nickname_error', language=get_language(callback)))
         return
 
     if callback.data == "answers":
@@ -75,7 +77,8 @@ async def handle_callback_query(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("🔮 Отправьте аккаунт другого человека (@nickname):")
     elif callback.data == "prediction":
         # Прямое предсказание без доп. ввода
-        loading = await callback.message.answer(get_phrase())
+        loading = await callback.message.answer(get_phrase(phrase_tag='wait_vox_answer',
+                                                           language=get_language(callback)))
         await callback.message.bot.send_chat_action(callback.message.chat.id, ChatAction.TYPING)
         try:
             report = await process_user_nickname(vox, nickname, prediction_prompt_)
@@ -84,38 +87,44 @@ async def handle_callback_query(callback: CallbackQuery, state: FSMContext):
             else:
                 await loading.edit_text("Не удалось получить предсказание. Попробуйте позже.")
         except Exception as e:
-            logger.error(e)
-            await loading.edit_text(f"Произошла ошибка: {e}")
+            logger.exception(e)
+            await loading.edit_text(get_phrase(phrase_tag='processed_error', language=get_language(callback)))
 
 @dp.message(BotStates.waiting_for_question)
 async def process_question(message: Message, state: FSMContext):
     user_nick = get_current_username(message)
     question = message.text.strip()
     await state.clear()
-    loading = await message.answer(get_phrase())
+    loading = await message.answer(get_phrase(phrase_tag='wait_vox_answer', language=get_language(message)))
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
         prompt = f"Вопрос: {question}" + answers_prompt_
         report = await process_user_nickname(vox, user_nick, prompt)
-        await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+        if report:
+            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+        else:
+            await loading.edit_text("Не удалось получить предсказание. Попробуйте позже.")
     except Exception as e:
-        logger.error(e)
-        await loading.edit_text(f"Произошла ошибка: {e}")
+        logger.exception(e)
+        await loading.edit_text(get_phrase(phrase_tag='processed_error', language=get_language(message)))
 
 @dp.message(BotStates.waiting_for_yes_no_question)
 async def process_yes_no(message: Message, state: FSMContext):
     user_nick = get_current_username(message)
     question = message.text.strip()
     await state.clear()
-    loading = await message.answer(get_phrase())
+    loading = await message.answer(get_phrase(phrase_tag='wait_vox_answer', language=get_language(message)))
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
         prompt = f"Вопрос: {question}" + yes_no_prompt_
         report = await process_user_nickname(vox, user_nick, prompt)
-        await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+        if report:
+            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+        else:
+            await loading.edit_text("Не удалось получить предсказание. Попробуйте позже.")
     except Exception as e:
-        logger.error(e)
-        await loading.edit_text(f"Произошла ошибка: {e}")
+        logger.exception(e)
+        await loading.edit_text(get_phrase(phrase_tag='processed_error', language=get_language(message)))
 
 @dp.message(BotStates.waiting_for_comp_nick)
 async def process_compatibility(message: Message, state: FSMContext):
@@ -125,14 +134,17 @@ async def process_compatibility(message: Message, state: FSMContext):
         await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
         return
     await state.clear()
-    loading = await message.answer(get_phrase())
+    loading = await message.answer(get_phrase(phrase_tag='wait_vox_answer', language=get_language(message)))
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
         report = await process_user_nicknames(vox, user_nick, target[1:], compatibility_prompt_)
-        await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+        if report:
+            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+        else:
+            await loading.edit_text("Не удалось получить предсказание. Попробуйте позже.")
     except Exception as e:
-        logger.error(e)
-        await loading.edit_text("Карты Таро не знают ничего об этом человеке.")
+        logger.exception(e)
+        await loading.edit_text(get_phrase(phrase_tag='processed_error', language=get_language(message)))
 
 @dp.message(BotStates.waiting_for_qualities_nick)
 async def process_qualities(message: Message, state: FSMContext):
@@ -142,14 +154,17 @@ async def process_qualities(message: Message, state: FSMContext):
         await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
         return
     await state.clear()
-    loading = await message.answer(get_phrase())
+    loading = await message.answer(get_phrase(phrase_tag='wait_vox_answer', language=get_language(message)))
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
         report = await process_user_nicknames(vox, user_nick, target[1:], qualities_prompt_)
-        await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+        if report:
+            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+        else:
+            await loading.edit_text("Не удалось получить предсказание. Попробуйте позже.")
     except Exception as e:
-        logger.error(e)
-        await loading.edit_text("Карты Таро не знают ничего об этом человеке.")
+        logger.exception(e)
+        await loading.edit_text(get_phrase(phrase_tag='processed_error', language=get_language(message)))
 
 @dp.message()
 async def fallback(message: Message):
