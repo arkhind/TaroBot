@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 # --- Enums ---
 
+
 class Subject(str, Enum):
     USER = "USER"
     GROUP = "GROUP"
@@ -51,6 +52,7 @@ class Sex(str, Enum):
 
 # --- Core analytics models ---
 
+
 class AIAnalytics(BaseModel):
     type: Subject
     id: int
@@ -71,6 +73,7 @@ class CosineSimilarityResponse(BaseModel):
 
 # --- Fast report models ---
 
+
 class FastGroupTag(BaseModel):
     group_name: str
     tags: List[str]
@@ -85,10 +88,12 @@ class FastReport(BaseModel):
 
 # --- Structured Report models ---
 
+
 class UserBelief(BaseModel):
     """
     Политические или идеологические убеждения пользователя.
     """
+
     belief: str
     sub_beliefs: List[str]
     probability: float
@@ -98,6 +103,7 @@ class UserInterest(BaseModel):
     """
     Интересы пользователя.
     """
+
     interest: str
     sub_interests: List[str]
     probability: float
@@ -107,6 +113,7 @@ class UserStructuredReport(BaseModel):
     """
     Структурированный отчёт по пользователю.
     """
+
     language: str
     sex: Sex
     age_range: List[int]
@@ -119,7 +126,9 @@ class UserStructuredReport(BaseModel):
     left_right: int = 0
     authoritarian_libertarian: int = 0
 
+
 # --- Search models ---
+
 
 class CloseUser(BaseModel):
     id: int
@@ -135,6 +144,7 @@ class CloseUsers(BaseModel):
 
 
 # --- Activity models ---
+
 
 class UserActivity(BaseModel):
     id: int
@@ -175,6 +185,7 @@ class ActivitiesTotal(BaseModel):
 
 
 # --- User profile & misc models ---
+
 
 class UserLanguageResponse(BaseModel):
     language: str
@@ -239,10 +250,13 @@ class UserProfile(BaseModel):
     account_age: float = 0
     pic: str = ""
     groups: List[UserProfileGroup] = Field(default_factory=list)
-    actions: List[Union[UserProfileActionMessage, UserProfileReaction]] = Field(default_factory=list)
+    actions: List[Union[UserProfileActionMessage, UserProfileReaction]] = Field(
+        default_factory=list
+    )
 
 
 # --- Group models ---
+
 
 class Group(BaseModel):
     source: Source

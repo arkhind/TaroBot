@@ -1,5 +1,6 @@
 # src/vox_wrapper/exceptions.py
 
+
 class ApiError(Exception):
     """Базовое исключение для ошибок API."""
 

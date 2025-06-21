@@ -12,11 +12,13 @@ from .models import *
 
 class AsyncVoxAPI:
     def __init__(self, token: str, base_url: str = "https://api.vox-lab.com/"):
-        self.base_url = base_url.rstrip('/')
-        self.session = aiohttp.ClientSession(headers={
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
-        })
+        self.base_url = base_url.rstrip("/")
+        self.session = aiohttp.ClientSession(
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+            }
+        )
 
     async def close(self):
         await self.session.close()
@@ -31,7 +33,9 @@ class AsyncVoxAPI:
                 try:
                     detail = await resp.json()
                 except Exception:
-                    raise ValidationError("Validation failed (422), but response is not valid JSON")
+                    raise ValidationError(
+                        "Validation failed (422), but response is not valid JSON"
+                    )
                 raise ValidationError(detail)
             if resp.status == 404:
                 raise NotFoundError(text)
@@ -45,22 +49,43 @@ class AsyncVoxAPI:
     async def ping(self) -> str:
         return await self._request("GET", "/ping")
 
-    async def ai_analytics(self, subject: Subject, subject_id: int, model: Optional[str] = None, no_cache: bool = False):
+    async def ai_analytics(
+        self,
+        subject: Subject,
+        subject_id: int,
+        model: Optional[str] = None,
+        no_cache: bool = False,
+    ):
         params = {}
         if model:
             params["model"] = model
         if no_cache:
             params["no_cache"] = True
-        return await self._request("GET", f"/ai_analytics/{subject.name}/{subject_id}", params=params)
+        return await self._request(
+            "GET", f"/ai_analytics/{subject.name}/{subject_id}", params=params
+        )
 
-    async def custom_report(self, subject: Subject, subject_id: int, custom_prompt: str, model: Optional[str] = None):
+    async def custom_report(
+        self,
+        subject: Subject,
+        subject_id: int,
+        custom_prompt: str,
+        model: Optional[str] = None,
+    ):
         params = {"custom_prompt": custom_prompt}
         if model:
             params["model"] = model
-        return await self._request("GET", f"/ai_analytics/custom/{subject.name}/{subject_id}", params=params)
+        return await self._request(
+            "GET", f"/ai_analytics/custom/{subject.name}/{subject_id}", params=params
+        )
 
-    async def cosine_similarity(self, subject: Subject, subject_id_1: int, subject_id_2: int):
-        return await self._request("GET", f"/ai_analytics/{subject.name}/cosine_similarity/{subject_id_1}/{subject_id_2}")
+    async def cosine_similarity(
+        self, subject: Subject, subject_id_1: int, subject_id_2: int
+    ):
+        return await self._request(
+            "GET",
+            f"/ai_analytics/{subject.name}/cosine_similarity/{subject_id_1}/{subject_id_2}",
+        )
 
     async def fast_report(self, user_id: int):
         return await self._request("GET", f"/reports/user/{user_id}/fast")
@@ -68,7 +93,9 @@ class AsyncVoxAPI:
     async def user_structured_report(self, user_id: int):
         return await self._request("GET", f"/reports/user/{user_id}")
 
-    async def search_users(self, query: str, limit: Optional[int] = None, offset: Optional[int] = None):
+    async def search_users(
+        self, query: str, limit: Optional[int] = None, offset: Optional[int] = None
+    ):
         params = {"query": query}
         if limit:
             params["limit"] = limit
@@ -76,15 +103,25 @@ class AsyncVoxAPI:
             params["offset"] = offset
         return await self._request("GET", "/search/ai/users", params=params)
 
-    async def search_raw(self, subject: Subject, query: str, limit: Optional[int] = None, offset: Optional[int] = None):
+    async def search_raw(
+        self,
+        subject: Subject,
+        query: str,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ):
         params = {"query": query}
         if limit:
             params["limit"] = limit
         if offset:
             params["offset"] = offset
-        return await self._request("GET", f"/search/ai/raw/{subject.name}", params=params)
+        return await self._request(
+            "GET", f"/search/ai/raw/{subject.name}", params=params
+        )
 
-    async def search_users_by_activity(self, query: str, start_date: str, end_date: str, limit: Optional[int] = None):
+    async def search_users_by_activity(
+        self, query: str, start_date: str, end_date: str, limit: Optional[int] = None
+    ):
         params = {"query": query, "start_date": start_date, "end_date": end_date}
         if limit:
             params["limit"] = limit
@@ -123,7 +160,9 @@ class AsyncVoxAPI:
     async def get_group(self, group_id: int):
         return await self._request("GET", f"/groups/{group_id}")
 
-    async def group_posts(self, group_id: int, messages_limit: int, messages_min: int, members_min: int):
+    async def group_posts(
+        self, group_id: int, messages_limit: int, messages_min: int, members_min: int
+    ):
         params = {
             "messages_limit": messages_limit,
             "messages_min": messages_min,

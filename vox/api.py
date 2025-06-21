@@ -35,12 +35,14 @@ from .models import (  # импорт моделей
 
 class VoxAPI:
     def __init__(self, token: str, base_url: str = "https://api.vox-lab.com/"):
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
-        })
+        self.session.headers.update(
+            {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+            }
+        )
 
     def _request(self, method: str, path: str, **kwargs) -> any:
         url = f"{self.base_url}/{path.lstrip('/')}"
@@ -52,7 +54,9 @@ class VoxAPI:
             try:
                 detail = resp.json()
             except ValueError:
-                raise ValidationError("Validation failed (422), but response is not valid JSON")
+                raise ValidationError(
+                    "Validation failed (422), but response is not valid JSON"
+                )
             raise ValidationError(detail)
         if resp.status_code == 404:
             raise NotFoundError(resp.text)

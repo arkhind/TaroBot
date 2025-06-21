@@ -4,10 +4,10 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-BOT_TOKEN = os.getenv('BOT_TOKEN')
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 if not BOT_TOKEN:
-    logger.error('BOT_TOKEN не найден в .env')
+    logger.error("BOT_TOKEN не найден в .env")
     exit(1)
 
 bot = Bot(token=BOT_TOKEN)
