@@ -11,6 +11,7 @@ import sys
 import asyncio
 from vox_executable import process_user_nickname, process_user_nicknames
 from keyboards import main_menu
+import random
 
 # Загружаем промпты
 answers_prompt_ = open("prompts/answers_prompt.txt").read()
@@ -18,6 +19,11 @@ yes_no_prompt_ = open("prompts/yes_no_prompt.txt").read()
 compatibility_prompt_ = open("prompts/compatibility_prompt.txt").read()
 qualities_prompt_ = open("prompts/qualities_prompt.txt").read()
 prediction_prompt_ = open("prompts/prediction_prompt.txt").read()
+
+phrases_think = open("phrases.txt").read().split('\n')
+
+def get_phrase():
+    return random.choice(phrases_think)
 
 # FSM состояния
 class BotStates(StatesGroup):
@@ -68,7 +74,7 @@ async def handle_callback_query(callback: CallbackQuery, state: FSMContext):
     elif callback.data == "prediction":
         # Прямое предсказание без доп. ввода
         await callback.message.bot.send_chat_action(callback.message.chat.id, ChatAction.TYPING)
-        loading = await callback.message.answer("🔮 Тусую колоду 🔮")
+        loading = await callback.message.answer(get_phrase())
         try:
             report = process_user_nickname(nickname, prediction_prompt_)
             if report:
@@ -85,7 +91,7 @@ async def process_question(message: Message, state: FSMContext):
     question = message.text.strip()
     await state.clear()
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    loading = await message.answer("🔮 Тусую колоду 🔮")
+    loading = await message.answer(get_phrase())
     try:
         prompt = f"Вопрос: {question}" + answers_prompt_
         report = process_user_nickname(user_nick, prompt)
@@ -100,7 +106,7 @@ async def process_yes_no(message: Message, state: FSMContext):
     question = message.text.strip()
     await state.clear()
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    loading = await message.answer("🔮 Тусую колоду 🔮")
+    loading = await message.answer(get_phrase())
     try:
         prompt = f"Вопрос: {question}" + yes_no_prompt_
         report = process_user_nickname(user_nick, prompt)
@@ -118,7 +124,7 @@ async def process_compatibility(message: Message, state: FSMContext):
         return
     await state.clear()
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    loading = await message.answer("🔮 Тусую колоду 🔮")
+    loading = await message.answer(get_phrase())
     try:
         report = process_user_nicknames(user_nick, target[1:], compatibility_prompt_)
         await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
@@ -135,7 +141,7 @@ async def process_qualities(message: Message, state: FSMContext):
         return
     await state.clear()
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    loading = await message.answer("🔮 Тусую колоду 🔮")
+    loading = await message.answer(get_phrase())
     try:
         report = process_user_nicknames(user_nick, target[1:], qualities_prompt_)
         await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
