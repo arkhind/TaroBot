@@ -8,5 +8,7 @@ dependencies = [
     "aiogram>=3.20.0.post0",
     "dotenv>=0.9.9",
     "loguru>=0.7.3",
+    "peewee-async>=1.1.0",
+    "pewee>=0.1.0.dev9",
     "requests>=2.32.4",
 ]

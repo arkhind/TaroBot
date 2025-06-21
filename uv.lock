@@ -343,6 +343,15 @@ wheels = [
 ]
 
 [[package]]
+name = "future"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/b2/4140c69c6a66432916b26158687e821ba631a4c9273c474343badf84d3ba/future-1.0.0.tar.gz", hash = "sha256:bd2968309307861edae1458a4f8a4f3598c03be43b97521076aebf5d94c07b05", size = 1228490, upload-time = "2024-02-21T11:52:38.461Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl", hash = "sha256:929292d34f5872e70396626ef385ec22355a1fae8ad29e1a734c3e43f9fbc216", size = 491326, upload-time = "2024-02-21T11:52:35.956Z" },
+]
+
+[[package]]
 name = "idna"
 version = "3.10"
 source = { registry = "https://pypi.org/simple" }
@@ -473,6 +482,45 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/26/a8/cac7f7d61e188ff44f28e46cb98f9cc21762e671c96e031f06c84a60556e/multidict-6.5.0-cp313-cp313t-win_amd64.whl", hash = "sha256:44cb5c53fb2d4cbcee70a768d796052b75d89b827643788a75ea68189f0980a1", size = 52112, upload-time = "2025-06-17T14:15:25.906Z" },
     { url = "https://files.pythonhosted.org/packages/51/9f/076533feb1b5488d22936da98b9c217205cfbf9f56f7174e8c5c86d86fe6/multidict-6.5.0-cp313-cp313t-win_arm64.whl", hash = "sha256:51d33fafa82640c0217391d4ce895d32b7e84a832b8aee0dcc1b04d8981ec7f4", size = 44358, upload-time = "2025-06-17T14:15:27.117Z" },
     { url = "https://files.pythonhosted.org/packages/44/d8/45e8fc9892a7386d074941429e033adb4640e59ff0780d96a8cf46fe788e/multidict-6.5.0-py3-none-any.whl", hash = "sha256:5634b35f225977605385f56153bd95a7133faffc0ffe12ad26e10517537e8dfc", size = 12181, upload-time = "2025-06-17T14:15:55.156Z" },
+]
+
+[[package]]
+name = "peewee"
+version = "3.18.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/ce/c2bb58d00cb12d19dea28d5a98d05a14350197a3d03eba60be9bae708bac/peewee-3.18.1.tar.gz", hash = "sha256:a76a694b3b3012ce22f00d51fd83e55bf80b595275a90ed62cd36eb45496cf1d", size = 3026130, upload-time = "2025-04-30T15:40:35.06Z" }
+
+[[package]]
+name = "peewee-async"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "peewee" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/57/cd/7c98f50148462e3a62221d27177425262cd9cb321f32799d7cb0a2025c8c/peewee_async-1.1.0.tar.gz", hash = "sha256:c39c1b28ebe277a3f78eeac64cec9902bb2c80e73ba9b6d0b399ecbaa5e16e6a", size = 12466, upload-time = "2025-02-23T06:13:14.457Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2b/d5/7c8b9cb5154b1af6dce4110b90ed2bcc00cc1d723aad153a81209cc8cde0/peewee_async-1.1.0-py3-none-any.whl", hash = "sha256:db7a7fbeffd5a5f1c7bfc32d8d809f9a5c064c19b11dd52794b87a88536e0063", size = 14274, upload-time = "2025-02-23T06:13:12.626Z" },
+]
+
+[[package]]
+name = "pefile"
+version = "2021.9.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "future" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ee/e1/a7bd302cf5f74547431b4e9b206dbef782d112df6b531f193bb4a29fb1b9/pefile-2021.9.3.tar.gz", hash = "sha256:344a49e40a94e10849f0fe34dddc80f773a12b40675bf2f7be4b8be578bdd94a", size = 72179, upload-time = "2021-09-03T14:25:19.174Z" }
+
+[[package]]
+name = "pewee"
+version = "0.1.0.dev9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pefile" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e2/18/b97208cc2adb2072f71a4274aceb6b31ba90877a3e8b7881d0b7676e8867/pewee-0.1.0.dev9-py3-none-any.whl", hash = "sha256:65b6058fb66f696a2a157c535b3284b8385edbf6c164fccb19fad162ad793f71", size = 7721, upload-time = "2022-04-13T19:01:58.493Z" },
 ]
 
 [[package]]
@@ -698,6 +746,8 @@ dependencies = [
     { name = "aiogram" },
     { name = "dotenv" },
     { name = "loguru" },
+    { name = "peewee-async" },
+    { name = "pewee" },
     { name = "requests" },
 ]
 
@@ -706,6 +756,8 @@ requires-dist = [
     { name = "aiogram", specifier = ">=3.20.0.post0" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "loguru", specifier = ">=0.7.3" },
+    { name = "peewee-async", specifier = ">=1.1.0" },
+    { name = "pewee", specifier = ">=0.1.0.dev9" },
     { name = "requests", specifier = ">=2.32.4" },
 ]
 
