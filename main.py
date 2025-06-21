@@ -6,10 +6,11 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from loguru import logger
-from config import BOT_TOKEN
+from config import BOT_TOKEN, VOX_TOKEN
 import sys
 import asyncio
 from vox_executable import process_user_nickname, process_user_nicknames
+from vox.asyncapi import AsyncVoxAPI
 from keyboards import main_menu
 import random
 
@@ -34,6 +35,7 @@ class BotStates(StatesGroup):
 
 # Инициализация бота и диспетчера с FSM
 bot = None
+vox = None
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 logger.remove()
@@ -76,7 +78,7 @@ async def handle_callback_query(callback: CallbackQuery, state: FSMContext):
         await callback.message.bot.send_chat_action(callback.message.chat.id, ChatAction.TYPING)
         loading = await callback.message.answer(get_phrase())
         try:
-            report = process_user_nickname(nickname, prediction_prompt_)
+            report = await process_user_nickname(vox, nickname, prediction_prompt_)
             if report:
                 await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
             else:
@@ -94,7 +96,7 @@ async def process_question(message: Message, state: FSMContext):
     loading = await message.answer(get_phrase())
     try:
         prompt = f"Вопрос: {question}" + answers_prompt_
-        report = process_user_nickname(user_nick, prompt)
+        report = await process_user_nickname(vox, user_nick, prompt)
         await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
         logger.error(e)
@@ -109,7 +111,7 @@ async def process_yes_no(message: Message, state: FSMContext):
     loading = await message.answer(get_phrase())
     try:
         prompt = f"Вопрос: {question}" + yes_no_prompt_
-        report = process_user_nickname(user_nick, prompt)
+        report = await process_user_nickname(vox, user_nick, prompt)
         await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
         logger.error(e)
@@ -126,7 +128,7 @@ async def process_compatibility(message: Message, state: FSMContext):
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     loading = await message.answer(get_phrase())
     try:
-        report = process_user_nicknames(user_nick, target[1:], compatibility_prompt_)
+        report = await process_user_nicknames(vox, user_nick, target[1:], compatibility_prompt_)
         await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
         logger.error(e)
@@ -143,7 +145,7 @@ async def process_qualities(message: Message, state: FSMContext):
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     loading = await message.answer(get_phrase())
     try:
-        report = process_user_nicknames(user_nick, target[1:], qualities_prompt_)
+        report = await process_user_nicknames(vox, user_nick, target[1:], qualities_prompt_)
         await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
         logger.error(e)
@@ -154,11 +156,12 @@ async def fallback(message: Message):
     await message.answer("Пожалуйста, используйте кнопки меню.")
 
 async def main():
-    global bot
+    global bot, vox
     if not BOT_TOKEN:
         logger.error('BOT_TOKEN не найден')
         return
     bot = Bot(token=BOT_TOKEN)
+    vox = AsyncVoxAPI(token=VOX_TOKEN)
     logger.info(f'Бот запущен на {bot.id}')
     await dp.start_polling(bot)
 
