@@ -172,6 +172,9 @@ async def process_compatibility(message: Message, state: FSMContext):
     if not target.startswith("@"):
         await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
         return
+    if target[1:] == user_nick:
+        await message.answer("Нельзя указать свой же ник. Отправьте аккаунт другого человека вида @nickname.")
+        return
     await state.clear()
     loading = await message.answer(
         get_phrase(phrase_tag="wait_vox_answer", language=get_language(message))
@@ -200,6 +203,9 @@ async def process_qualities(message: Message, state: FSMContext):
     target = message.text.strip()
     if not target.startswith("@"):
         await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
+        return
+    if target[1:] == user_nick:
+        await message.answer("Нельзя указать свой же ник. Отправьте аккаунт другого человека вида @nickname.")
         return
     await state.clear()
     loading = await message.answer(
