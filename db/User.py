@@ -10,6 +10,8 @@ class User(peewee_async.AioModel):
     telegram_chat_id = peewee.BigIntegerField()
     language = peewee.TextField(default="ru")
     name = peewee.TextField(null=True)
+    birth_date = peewee.DateField(null=True)
+    zodiac_sign = peewee.TextField(null=True)
 
     class Meta:
         database = database
