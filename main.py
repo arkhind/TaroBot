@@ -20,11 +20,7 @@ from utils.get_user_info import get_current_username, get_language
 from utils.login_requied import only_registered
 
 # Загружаем промпты
-answers_prompt_ = open("prompts/answers_prompt.txt").read()
-yes_no_prompt_ = open("prompts/yes_no_prompt.txt").read()
-compatibility_prompt_ = open("prompts/compatibility_prompt.txt").read()
-qualities_prompt_ = open("prompts/qualities_prompt.txt").read()
-prediction_prompt_ = open("prompts/prediction_prompt.txt").read()
+from prompts import *
 
 
 # FSM состояния
@@ -58,8 +54,8 @@ async def start_handler(message: Message):
         ...
         # Уже было создано => старый пользователь
     await message.answer(
-        get_phrase(phrase_tag="menu", language=get_language(message)).format(
-            nickname=nickname
+        get_phrase(phrase_tag="menu", language=get_language(message)).replace(
+            '{nickname}', nickname
         ),
         reply_markup=main_menu,
     )
@@ -103,7 +99,7 @@ async def handle_callback_query(callback: CallbackQuery, state: FSMContext):
             callback.message.chat.id, ChatAction.TYPING
         )
         try:
-            report = await process_user_nickname(vox, nickname, prediction_prompt_)
+            report = await process_user_nickname(vox, nickname, prediction_prompt)
             if report:
                 await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
             else:
@@ -129,7 +125,7 @@ async def process_question(message: Message, state: FSMContext):
     )
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
-        prompt = f"Вопрос: {question}" + answers_prompt_
+        prompt = f"Вопрос: {question}" + answers_prompt
         report = await process_user_nickname(vox, user_nick, prompt)
         if report:
             await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
@@ -154,7 +150,7 @@ async def process_yes_no(message: Message, state: FSMContext):
     )
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
-        prompt = f"Вопрос: {question}" + yes_no_prompt_
+        prompt = f"Вопрос: {question}" + yes_no_prompt
         report = await process_user_nickname(vox, user_nick, prompt)
         if report:
             await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
@@ -183,7 +179,7 @@ async def process_compatibility(message: Message, state: FSMContext):
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
         report = await process_user_nicknames(
-            vox, user_nick, target[1:], compatibility_prompt_
+            vox, user_nick, target[1:], compatibility_prompt
         )
         if report:
             await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
@@ -211,15 +207,35 @@ async def process_qualities(message: Message, state: FSMContext):
     )
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     try:
-        report = await process_user_nicknames(
-            vox, user_nick, target[1:], qualities_prompt_
-        )
-        if report:
-            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+        target_qualities = await process_user_nickname(
+            vox, target[1:], qualities_prompt["people_qualities"]
+        )  ## получаем качества target'а
+        if target_qualities:
+            report = await process_user_nicknames(
+                vox,
+                user_nick,
+                target[1:],
+                qualities_prompt["tips"].replace('{info}', target_qualities),
+            )
+            if report:
+                await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+            else:
+                await loading.edit_text(
+                    "Не удалось получить предсказание. Попробуйте позже."
+                )
         else:
             await loading.edit_text(
                 "Не удалось получить предсказание. Попробуйте позже."
             )
+        # report = await process_user_nicknames(
+        #     vox, user_nick, target[1:], qualities_prompt
+        # )
+        # if report:
+        #     await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+        # else:
+        #     await loading.edit_text(
+        #         "Не удалось получить предсказание. Попробуйте позже."
+        #     )
     except Exception as e:
         logger.exception(e)
         await loading.edit_text(

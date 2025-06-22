@@ -65,7 +65,7 @@ async def process_user_nicknames(vox: AsyncVoxAPI, from_user, about_user, prompt
         report = await vox.custom_report(
             subject=Subject.USER,
             subject_id=about_user_id,
-            custom_prompt=f"Пользователь {from_user}\n{str(airep_from_user)}\n\n"
+            custom_prompt=f"Я {from_user}\n{str(airep_from_user)}\n\n"
             + f"Спросил о {about_user}\n{str(airep_about_user)}\n\n{prompt}",
         )
         if "report" in report:
