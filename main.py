@@ -10,6 +10,7 @@ from aiogram.enums import ParseMode, ChatAction
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.client.default import DefaultBotProperties
 
 from config import BOT_TOKEN, VOX_TOKEN
 from keyboards import main_menu, get_name_keyboard
@@ -20,6 +21,7 @@ from translations.get_phrase import get_phrase
 from utils.get_user_info import get_current_username, get_language
 from utils.login_requied import only_registered
 from utils.zodiac import get_zodiac_sign
+from inline_daily_prediction import router as inline_router, VoxMiddleware
 
 # Загружаем промпты
 from prompts import *
@@ -384,10 +386,24 @@ async def main():
     if not BOT_TOKEN:
         logger.error("BOT_TOKEN не найден")
         return
-    bot = Bot(token=BOT_TOKEN)
+    
+    # Инициализируем бота с поддержкой inline режима
+    bot = Bot(
+        token=BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
+    )
     vox = AsyncVoxAPI(token=VOX_TOKEN)
+    
+    # Добавляем middleware для передачи vox в inline хендлеры
+    inline_router.inline_query.middleware(VoxMiddleware(vox))
+    inline_router.callback_query.middleware(VoxMiddleware(vox))
+    
+    # Регистрируем inline хендлеры в глобальный диспетчер
+    dp.include_router(inline_router)
+    
+    # Запускаем бота
     logger.info(f"Бот запущен на {bot.id}")
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 
 if __name__ == "__main__":
