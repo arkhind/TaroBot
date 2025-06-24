@@ -443,11 +443,7 @@ async def handle_get_yesno(callback: CallbackQuery, vox: AsyncVoxAPI):
 async def handle_get_compatibility(callback: CallbackQuery, vox: AsyncVoxAPI):
     await callback.answer()
     target_nick = callback.data.replace("get_comp_", "") if callback.data else ""
-    user_nick = (
-        callback.from_user.username
-        if callback.from_user and callback.from_user.username
-        else str(callback.from_user.id) if callback.from_user else "user"
-    )
+    user_nick = callback.from_user.username if callback.from_user and callback.from_user.username else str(callback.from_user.id) if callback.from_user else "user"
     logger.info(f"[CALLBACK] Получение совместимости @{user_nick} и @{target_nick}")
     bot = callback.bot
     try:
@@ -455,44 +451,45 @@ async def handle_get_compatibility(callback: CallbackQuery, vox: AsyncVoxAPI):
             await bot.edit_message_text(
                 f"❤️ **Анализируем совместимость @{user_nick} и @{target_nick}...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.MARKDOWN
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
             await callback.message.edit_text(f"❤️ **Анализируем совместимость @{user_nick} и @{target_nick}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
-        report = await process_user_nicknames(
-            vox, user_nick, target_nick, compatibility_prompt
+        # Используем тот же промпт, что и для двух никнеймов
+        comp2_prompt = (
+            "Проанализируй совместимость этих людей между собой.\n"
+            "Опиши главные черты каждого из них.\n"
+            "Дай конкретный ответ в процентах насколько люди совместимы.\n"
+            "Текста должно быть немного, все должно быть лаконично.\n"
+            "Главное чтобы было количество процентов совместимости.\n"
+            "Дай ответ на русском языке.\n"
+            "Используй стиль гадания на картах таро, упомяни карты совместимости.\n"
+            "Ответ должен быть полезным и вдохновляющим.\n"
+            "Используй эмодзи в меру для создания атмосферы.\n"
+            "Не используй bullet list.\n"
+            "Не ссылайся на активность человека в конкретных каналах и чатах.\n"
+            "Отвечай на русском языке."
         )
+        prompt = f"Пользователь 1: {user_nick}\nПользователь 2: {target_nick}\n\n" + comp2_prompt
+        logger.info(f"[PROMPT] Итоговый prompt:\n{prompt}")
+        report = await process_user_nicknames(vox, user_nick, target_nick, prompt)
         if report:
             formatted = f"❤️ **Совместимость @{user_nick} и @{target_nick}**\n\n{report}"
             if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    formatted,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
-                )
+                await bot.edit_message_text(formatted, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.MARKDOWN)
             elif callback.message and hasattr(callback.message, "edit_text"):
                 await callback.message.edit_text(formatted, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
         else:
             error_text = "❌ Не удалось получить совместимость. Попробуйте позже."
             if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    error_text,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
-                )
+                await bot.edit_message_text(error_text, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.MARKDOWN)
             elif callback.message and hasattr(callback.message, "edit_text"):
                 await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
     except Exception as e:
-        logger.exception(
-            f"[CALLBACK] Ошибка при получении совместимости @{user_nick} и @{target_nick}: {e}"
-        )
+        logger.exception(f"[CALLBACK] Ошибка при получении совместимости @{user_nick} и @{target_nick}: {e}")
         error_text = "❌ Произошла ошибка при анализе совместимости."
         if callback.inline_message_id and bot is not None:
-            await bot.edit_message_text(
-                error_text,
-                inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
-            )
+            await bot.edit_message_text(error_text, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.MARKDOWN)
         elif callback.message and hasattr(callback.message, "edit_text"):
             await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
 
