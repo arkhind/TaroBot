@@ -9,6 +9,7 @@ dependencies = [
     "aiopg>=1.4.0",
     "dotenv>=0.9.9",
     "loguru>=0.7.3",
+    "mixpanel>=4.10.1",
     "peewee-async>=1.1.0",
     "pewee>=0.1.0.dev9",
     "pyyaml>=6.0.2",
