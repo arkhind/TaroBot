@@ -17,7 +17,7 @@ def _process_report_lines(report_str: str) -> str:
     return "\n".join(processed_lines)
 
 
-async def process_user_nickname(vox: AsyncVoxAPI, nickname, prompt):
+async def process_user_nickname(vox: None | AsyncVoxAPI, nickname, prompt):
     try:
         user_id = await vox.get_user_id(nickname)
         user_id = user_id["id"]
