@@ -84,7 +84,7 @@ async def start_handler(message: Message, state: FSMContext):
 
             if mixpanel:
                 mixpanel.track(
-                    distinct_id=uuid.uuid4().hex,
+                    distinct_id=str(message.from_user.id),
                     event_name="menu_open",
                     properties={
                         "telegram_user_id": message.from_user.id,
@@ -122,7 +122,7 @@ async def menu_handler(message: Message, db_user: User):
 
     if mixpanel:
         mixpanel.track(
-            distinct_id=uuid.uuid4().hex,
+            distinct_id=str(message.from_user.id),
             event_name="menu_open",
             properties={
                 "telegram_user_id": message.from_user.id,
@@ -188,7 +188,7 @@ async def handle_callback_query(
         )
         if mixpanel:
             mixpanel.track(
-                distinct_id=uuid.uuid4().hex,
+                distinct_id=str(callback.message.from_user.id),
                 event_name="prediction",
                 properties={
                     "telegram_user_id": callback.from_user.id,
@@ -283,7 +283,7 @@ async def process_birth_date(message: Message, state: FSMContext):
         )
         if mixpanel:
             mixpanel.track(
-                distinct_id=uuid.uuid4().hex,
+                distinct_id=str(message.from_user.id),
                 event_name="finish_registration",
                 properties={
                     "telegram_user_id": message.from_user.id,
@@ -333,7 +333,7 @@ async def process_question(message: Message, state: FSMContext):
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     if mixpanel:
         mixpanel.track(
-            distinct_id=uuid.uuid4().hex,
+            distinct_id=str(message.from_user.id),
             event_name="question",
             properties={
                 "telegram_user_id": message.from_user.id,
@@ -371,7 +371,7 @@ async def process_yes_no(message: Message, state: FSMContext):
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     if mixpanel:
         mixpanel.track(
-            distinct_id=uuid.uuid4().hex,
+            distinct_id=str(message.from_user.id),
             event_name="yes_no_question",
             properties={
                 "telegram_user_id": message.from_user.id,
@@ -417,7 +417,7 @@ async def process_compatibility(message: Message, state: FSMContext):
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     if mixpanel:
         mixpanel.track(
-            distinct_id=uuid.uuid4().hex,
+            distinct_id=str(message.from_user.id),
             event_name="compatibility",
             properties={
                 "telegram_user_id": message.from_user.id,
@@ -464,7 +464,7 @@ async def process_qualities(message: Message, state: FSMContext):
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     if mixpanel:
         mixpanel.track(
-            distinct_id=uuid.uuid4().hex,
+            distinct_id=str(message.from_user.id),
             event_name="qualities",
             properties={
                 "telegram_user_id": message.from_user.id,
