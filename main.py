@@ -53,6 +53,25 @@ else:
     mixpanel = None
 
 
+async def show_menu(message: Union[Message, CallbackQuery], db_user: User):
+    if isinstance(message, CallbackQuery):
+        message = message.message
+    
+    nickname = db_user.name
+    zodiac_sign = (
+        get_phrase(phrase_tag=db_user.zodiac_sign, language=get_language(message))
+        if db_user.zodiac_sign
+        else "Не указан"
+    )
+
+    await message.answer(
+        get_phrase(phrase_tag="menu", language=get_language(message))
+        .replace("{nickname}", nickname or db_user.name)
+        .replace("{zodiac_sign}", zodiac_sign),
+        reply_markup=main_menu,
+    )
+
+
 @dp.message(CommandStart())
 async def start_handler(message: Message, state: FSMContext):
     assert message.from_user
@@ -213,6 +232,8 @@ async def handle_callback_query(
                     phrase_tag="processed_error", language=get_language(callback)
                 )
             )
+        finally:
+            await show_menu(callback.message, db_user)
 
 
 @dp.callback_query(lambda c: c.data.startswith("name_"))
@@ -355,6 +376,8 @@ async def process_question(message: Message, state: FSMContext):
         await loading.edit_text(
             get_phrase(phrase_tag="processed_error", language=get_language(message))
         )
+    finally:
+        await show_menu(message, user)
 
 
 @dp.message(BotStates.waiting_for_yes_no_question)
@@ -393,6 +416,8 @@ async def process_yes_no(message: Message, state: FSMContext):
         await loading.edit_text(
             get_phrase(phrase_tag="processed_error", language=get_language(message))
         )
+    finally:
+        await show_menu(message, user)
 
 
 @dp.message(BotStates.waiting_for_comp_nick)
@@ -440,6 +465,8 @@ async def process_compatibility(message: Message, state: FSMContext):
         await loading.edit_text(
             get_phrase(phrase_tag="processed_error", language=get_language(message))
         )
+    finally:
+        await show_menu(message, user)
 
 
 @dp.message(BotStates.waiting_for_qualities_nick)
@@ -507,6 +534,8 @@ async def process_qualities(message: Message, state: FSMContext):
         await loading.edit_text(
             get_phrase(phrase_tag="processed_error", language=get_language(message))
         )
+    finally:
+        await show_menu(message, user)
 
 
 @dp.message()
