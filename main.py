@@ -25,6 +25,7 @@ from utils.get_user_info import get_current_username, get_language
 from utils.login_requied import only_registered, only_registered_callback
 from utils.zodiac import get_zodiac_sign
 from inline_daily_prediction import router as inline_router, VoxMiddleware
+from typing import Union
 
 # Загружаем промпты
 from prompts import *
