@@ -19,25 +19,44 @@ def _process_report_lines(report_str: str) -> str:
 
 async def process_user_nickname(vox: None | AsyncVoxAPI, nickname, prompt):
     try:
-        user_id = await vox.get_user_id(nickname)
-        user_id = user_id["id"]
+        logger.info(f"[DEBUG] process_user_nickname: начинаем обработку {nickname}")
+        logger.info(f"[DEBUG] process_user_nickname: вызываем get_user_id с nickname={nickname}")
+        user_id_response = await vox.get_user_id(nickname)
+        logger.info(f"[DEBUG] process_user_nickname: ответ get_user_id: {user_id_response}")
+        user_id = user_id_response["id"]
+        logger.info(f"[DEBUG] process_user_nickname: используем user_id={user_id}")
 
+        logger.info(f"[DEBUG] process_user_nickname: получаем AI аналитику для {nickname}")
         ai_analytic = await vox.ai_analytics(subject=Subject.USER, subject_id=user_id)
+        logger.info(f"[DEBUG] process_user_nickname: AI аналитика получена: {type(ai_analytic)}")
+        logger.info(f"[DEBUG] process_user_nickname: AI аналитика содержимое: {ai_analytic}")
         if "report" in ai_analytic:
             ai_analytic = ai_analytic["report"]
+            logger.info(f"[DEBUG] process_user_nickname: извлекли report из AI аналитики")
 
+        logger.info(f"[DEBUG] process_user_nickname: создаем кастомный отчет для {nickname}")
         report = await vox.custom_report(
             subject=Subject.USER,
             subject_id=user_id,
             custom_prompt=f"{str(ai_analytic)}\n\n{prompt}",
         )
+        logger.info(f"[DEBUG] process_user_nickname: кастомный отчет получен: {type(report)}")
+        logger.info(f"[DEBUG] process_user_nickname: кастомный отчет содержимое: {report}")
         if "report" in report:
+            logger.info(f"[DEBUG] process_user_nickname: извлекаем report из ответа")
             report = json.loads(report["report"])
+            logger.info(f"[DEBUG] process_user_nickname: распарсенный JSON: {report}")
             if "report" in report:
                 report = report["report"]
+                logger.info(f"[DEBUG] process_user_nickname: финальный report получен")
                 return _process_report_lines(report)
+            else:
+                logger.error(f"[DEBUG] process_user_nickname: нет 'report' в распарсенном JSON")
+        else:
+            logger.error(f"[DEBUG] process_user_nickname: нет 'report' в ответе API")
     except Exception as e:
-        logger.error(f"Error in process_user_nickname: {e}")
+        logger.error(f"Error in process_user_nickname for {nickname}: {e}")
+        logger.exception(f"Full traceback for process_user_nickname error:")
     return None
 
 
@@ -48,6 +67,7 @@ async def process_user_nicknames(vox: AsyncVoxAPI, from_user, about_user, prompt
     try:
         from_user_id = await vox.get_user_id(from_user)
         from_user_id = from_user_id["id"]
+        
         airep_from_user = await vox.ai_analytics(
             subject=Subject.USER, subject_id=from_user_id
         )
@@ -56,6 +76,7 @@ async def process_user_nicknames(vox: AsyncVoxAPI, from_user, about_user, prompt
 
         about_user_id = await vox.get_user_id(about_user)
         about_user_id = about_user_id["id"]
+        
         airep_about_user = await vox.ai_analytics(
             subject=Subject.USER, subject_id=about_user_id
         )
@@ -79,6 +100,7 @@ async def process_user_nicknames(vox: AsyncVoxAPI, from_user, about_user, prompt
                 return report
     except Exception as e:
         logger.error(f"Error occurred in process_user_nicknames: {e}")
+        logger.exception(f"Full traceback for process_user_nicknames error:")
     return None
 
 

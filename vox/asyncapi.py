@@ -1,5 +1,7 @@
 import aiohttp
 from typing import Optional, List, Union, Any
+from urllib.parse import quote
+from loguru import logger
 from .exceptions import (
     AuthenticationError,
     ValidationError,
@@ -149,7 +151,9 @@ class AsyncVoxAPI:
         return await self._request("GET", f"/users/{user_id}/names")
 
     async def get_user_id(self, username: str):
-        return await self._request("GET", f"/users/username/{username}")
+        # URL-кодируем username для корректной обработки специальных символов
+        encoded_username = quote(username, safe='')
+        return await self._request("GET", f"/users/username/{encoded_username}")
 
     async def get_registration_date(self, user_id: int):
         return await self._request("GET", f"/users/{user_id}/registration")

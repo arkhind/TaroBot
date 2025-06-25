@@ -428,6 +428,11 @@ async def process_compatibility(message: Message, state: FSMContext):
     user = await User.aio_get(
         telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
     )
+    
+    logger.info(f"[DEBUG] process_compatibility: user_nick = {user_nick}")
+    logger.info(f"[DEBUG] process_compatibility: target = {target}")
+    logger.info(f"[DEBUG] process_compatibility: target[1:] = {target[1:]}")
+    
     if not target.startswith("@"):
         await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
         return
@@ -452,17 +457,19 @@ async def process_compatibility(message: Message, state: FSMContext):
             },
         )
     try:
+        logger.info(f"[DEBUG] process_compatibility: вызываем process_user_nicknames с {user_nick} и {target[1:]}")
         report = await process_user_nicknames(
             vox, user_nick, target[1:], compatibility_prompt
         )
         if report:
             await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
         else:
+            logger.error(f"[DEBUG] process_compatibility: process_user_nicknames вернул None")
             await loading.edit_text(
                 "Не удалось получить предсказание. Попробуйте позже."
             )
     except Exception as e:
-        logger.exception(e)
+        logger.exception(f"[DEBUG] process_compatibility: ошибка при вызове process_user_nicknames: {e}")
         await loading.edit_text(
             get_phrase(phrase_tag="processed_error", language=get_language(message))
         )
@@ -477,6 +484,11 @@ async def process_qualities(message: Message, state: FSMContext):
     user = await User.aio_get(
         telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
     )
+    
+    logger.info(f"[DEBUG] process_qualities: user_nick = {user_nick}")
+    logger.info(f"[DEBUG] process_qualities: target = {target}")
+    logger.info(f"[DEBUG] process_qualities: target[1:] = {target[1:]}")
+    
     if not target.startswith("@"):
         await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
         return
@@ -501,10 +513,12 @@ async def process_qualities(message: Message, state: FSMContext):
             },
         )
     try:
+        logger.info(f"[DEBUG] process_qualities: вызываем process_user_nickname для получения качеств {target[1:]}")
         target_qualities = await process_user_nickname(
             vox, target[1:], qualities_prompt["people_qualities"]
         )  ## получаем качества target'а
         if target_qualities:
+            logger.info(f"[DEBUG] process_qualities: качества получены, вызываем process_user_nicknames")
             report = await process_user_nicknames(
                 vox,
                 user_nick,
@@ -514,10 +528,12 @@ async def process_qualities(message: Message, state: FSMContext):
             if report:
                 await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
             else:
+                logger.error(f"[DEBUG] process_qualities: process_user_nicknames вернул None")
                 await loading.edit_text(
                     "Не удалось получить предсказание. Попробуйте позже."
                 )
         else:
+            logger.error(f"[DEBUG] process_qualities: process_user_nickname вернул None")
             await loading.edit_text(
                 "Не удалось получить предсказание. Попробуйте позже."
             )
@@ -531,7 +547,7 @@ async def process_qualities(message: Message, state: FSMContext):
         #         "Не удалось получить предсказание. Попробуйте позже."
         #     )
     except Exception as e:
-        logger.exception(e)
+        logger.exception(f"[DEBUG] process_qualities: ошибка при обработке: {e}")
         await loading.edit_text(
             get_phrase(phrase_tag="processed_error", language=get_language(message))
         )

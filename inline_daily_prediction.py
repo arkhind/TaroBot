@@ -11,6 +11,7 @@ from aiogram.types import (
 from aiogram.enums import ParseMode
 from loguru import logger
 import re
+import json
 
 from vox.asyncapi import AsyncVoxAPI
 from vox_executable import process_user_nickname, process_user_nicknames
@@ -21,8 +22,27 @@ from prompts import (
     yes_no_prompt,
     compatibility_prompt,
 )
+from utils.nickname_codec import encode_nickname, decode_nickname
+from mixpanel import Mixpanel
+from config import MIXPANEL_TOKEN
 
 router = Router()
+mp = Mixpanel(MIXPANEL_TOKEN)
+
+
+def encode_nickname(nickname: str) -> str:
+    """Кодирует никнейм для использования в callback_data, заменяя _ на -"""
+    return nickname.replace("_", "-")
+
+
+def decode_nickname(encoded_nickname: str) -> str:
+    """Декодирует никнейм из callback_data, заменяя - на _"""
+    return encoded_nickname.replace("-", "_")
+
+
+def escape_nickname_for_markdown(nickname: str) -> str:
+    """Экранирует никнейм для корректного отображения в Markdown"""
+    return nickname.replace("_", "\\_")
 
 
 class VoxMiddleware:
@@ -39,9 +59,17 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
     """Inline функция для обработки запросов"""
     results: list[InlineQueryResultUnion] = []
     query = inline_query.query.strip()
+    user_id = inline_query.from_user.id if inline_query.from_user else None
     logger.info(
-        f"[INLINE] Получен запрос: '{query}' от user_id={inline_query.from_user.id if inline_query.from_user else 'unknown'}"
+        f"[INLINE] Получен запрос: '{query}' от user_id={user_id}"
     )
+    query_type = 'nickname' if query.startswith("@") or (
+        query and all(c.isalnum() or c == "_" for c in query) and len(query) < 30
+    ) else 'question'
+    mp.track(user_id, 'inline_query', {
+        'query': query,
+        'query_type': query_type
+    })
 
     if not query:
         logger.info("[INLINE] Пустой запрос, отправляю инструкцию")
@@ -71,13 +99,17 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
     match = re.match(r"@?(\w{1,30})\s+@?(\w{1,30})$", query)
     if match:
         nick1, nick2 = match.group(1), match.group(2)
+        encoded_nick1 = encode_nickname(nick1)
+        encoded_nick2 = encode_nickname(nick2)
+        escaped_nick1 = escape_nickname_for_markdown(nick1)
+        escaped_nick2 = escape_nickname_for_markdown(nick2)
         results = [
             InlineQueryResultArticle(
-                id=f"compat2_{nick1}_{nick2}",
+                id=f"compat2_{encoded_nick1}_{encoded_nick2}",
                 title=f"❤️ Совместимость @{nick1} и @{nick2}",
                 description="Узнать совместимость между двумя людьми",
                 input_message_content=InputTextMessageContent(
-                    message_text=f"❤️ **Совместимость @{nick1} и @{nick2}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
+                    message_text=f"❤️ **Совместимость @{escaped_nick1} и @{escaped_nick2}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
                     parse_mode=ParseMode.MARKDOWN,
                 ),
                 reply_markup=InlineKeyboardMarkup(
@@ -85,7 +117,7 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
                         [
                             InlineKeyboardButton(
                                 text="Совместимость двух людей",
-                                callback_data=f"get_comp2_{nick1}_{nick2}",
+                                callback_data=f"get_comp2_{encoded_nick1}_{encoded_nick2}",
                             )
                         ]
                     ]
@@ -105,13 +137,15 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
 
     if is_nickname:
         clean_nickname = query[1:] if query.startswith("@") else query
+        encoded_nickname = encode_nickname(clean_nickname)
+        escaped_nickname = escape_nickname_for_markdown(clean_nickname)
         results = [
             InlineQueryResultArticle(
-                id=f"prediction_{clean_nickname}",
+                id=f"prediction_{encoded_nickname}",
                 title=f"🔮 Предсказание для @{clean_nickname}",
                 description="Получить предсказание на день",
                 input_message_content=InputTextMessageContent(
-                    message_text=f"🔮 **Предсказание на день для @{clean_nickname}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
+                    message_text=f"🔮 **Предсказание на день для @{escaped_nickname}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
                     parse_mode=ParseMode.MARKDOWN,
                 ),
                 reply_markup=InlineKeyboardMarkup(
@@ -119,18 +153,18 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
                         [
                             InlineKeyboardButton(
                                 text="Получить предсказание",
-                                callback_data=f"get_pred_{clean_nickname}",
+                                callback_data=f"get_pred_{encoded_nickname}",
                             )
                         ]
                     ]
                 ),
             ),
             InlineQueryResultArticle(
-                id=f"qualities_{clean_nickname}",
+                id=f"qualities_{encoded_nickname}",
                 title=f"🔍 Анализ качеств @{clean_nickname}",
                 description="Анализировать качества и получить советы",
                 input_message_content=InputTextMessageContent(
-                    message_text=f"🔍 **Анализ качеств @{clean_nickname}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
+                    message_text=f"🔍 **Анализ качеств @{escaped_nickname}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
                     parse_mode=ParseMode.MARKDOWN,
                 ),
                 reply_markup=InlineKeyboardMarkup(
@@ -138,18 +172,18 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
                         [
                             InlineKeyboardButton(
                                 text="Анализировать качества",
-                                callback_data=f"get_qual_{clean_nickname}",
+                                callback_data=f"get_qual_{encoded_nickname}",
                             )
                         ]
                     ]
                 ),
             ),
             InlineQueryResultArticle(
-                id=f"compat_{clean_nickname}",
+                id=f"compat_{encoded_nickname}",
                 title=f"❤️ Совместимость с @{clean_nickname}",
                 description="Узнать совместимость с этим человеком",
                 input_message_content=InputTextMessageContent(
-                    message_text=f"❤️ **Совместимость с @{clean_nickname}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
+                    message_text=f"❤️ **Совместимость с @{escaped_nickname}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
                     parse_mode=ParseMode.MARKDOWN,
                 ),
                 reply_markup=InlineKeyboardMarkup(
@@ -157,7 +191,7 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
                         [
                             InlineKeyboardButton(
                                 text="Совместимость",
-                                callback_data=f"get_comp_{clean_nickname}",
+                                callback_data=f"get_comp_{encoded_nickname}",
                             )
                         ]
                     ]
@@ -205,18 +239,19 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
 @router.callback_query(lambda c: c.data.startswith("get_pred_"))
 async def handle_get_prediction(callback: CallbackQuery, vox: AsyncVoxAPI):
     await callback.answer()
-    nickname = callback.data.replace("get_pred_", "") if callback.data else ""
+    nickname = decode_nickname(callback.data.replace("get_pred_", "")) if callback.data else ""
+    escaped_nickname = escape_nickname_for_markdown(nickname)
     logger.info(f"[CALLBACK] Получение предсказания для @{nickname}")
     bot = callback.bot
     try:
         if callback.inline_message_id and bot is not None:
             await bot.edit_message_text(
-                f"🔮 **Получаем предсказание для @{nickname}...**\n\n⏳ Пожалуйста, подождите...",
+                f"🔮 **Получаем предсказание для @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
                 parse_mode=ParseMode.MARKDOWN,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(f"🔮 **Получаем предсказание для @{nickname}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(f"🔮 **Получаем предсказание для @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
         daily_prompt = (
             f"""
 Предсказание на день для пользователя с никнеймом: {nickname}
@@ -235,7 +270,7 @@ async def handle_get_prediction(callback: CallbackQuery, vox: AsyncVoxAPI):
         )
         prediction = await process_user_nickname(vox, nickname, daily_prompt)
         if prediction:
-            formatted = f"🔮 **Предсказание на день для @{nickname}**\n\n{prediction}"
+            formatted = f"🔮 **Предсказание на день для @{escaped_nickname}**\n\n{prediction}"
             if callback.inline_message_id and bot is not None:
                 await bot.edit_message_text(
                     formatted,
@@ -327,18 +362,19 @@ async def handle_get_question(callback: CallbackQuery, vox: AsyncVoxAPI):
 @router.callback_query(lambda c: c.data.startswith("get_qual_"))
 async def handle_get_qualities(callback: CallbackQuery, vox: AsyncVoxAPI):
     await callback.answer()
-    nickname = callback.data.replace("get_qual_", "") if callback.data else ""
+    nickname = decode_nickname(callback.data.replace("get_qual_", "")) if callback.data else ""
+    escaped_nickname = escape_nickname_for_markdown(nickname)
     logger.info(f"[CALLBACK] Получение анализа качеств для @{nickname}")
     bot = callback.bot
     try:
         if callback.inline_message_id and bot is not None:
             await bot.edit_message_text(
-                f"🔮 **Анализируем качества @{nickname}...**\n\n⏳ Пожалуйста, подождите...",
+                f"🔮 **Анализируем качества @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
                 parse_mode=ParseMode.MARKDOWN,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(f"🔮 **Анализируем качества @{nickname}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(f"🔮 **Анализируем качества @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
         target_qualities = await process_user_nickname(
             vox, nickname, qualities_prompt["people_qualities"]
         )
@@ -347,9 +383,9 @@ async def handle_get_qualities(callback: CallbackQuery, vox: AsyncVoxAPI):
             advice_prompt = qualities_prompt["tips"].replace("{info}", target_qualities)
             advice = await process_user_nicknames(vox, user_id, nickname, advice_prompt)
             if advice:
-                formatted = f"🔮 **Анализ качеств @{nickname}**\n\n**Качества:**\n{target_qualities}\n\n**Советы для взаимодействия:**\n{advice}"
+                formatted = f"🔮 **Анализ качеств @{escaped_nickname}**\n\n**Качества:**\n{target_qualities}\n\n**Советы для взаимодействия:**\n{advice}"
             else:
-                formatted = f"🔮 **Анализ качеств @{nickname}**\n\n**Качества:**\n{target_qualities}"
+                formatted = f"🔮 **Анализ качеств @{escaped_nickname}**\n\n**Качества:**\n{target_qualities}"
             if callback.inline_message_id and bot is not None:
                 await bot.edit_message_text(
                     formatted,
@@ -369,7 +405,7 @@ async def handle_get_qualities(callback: CallbackQuery, vox: AsyncVoxAPI):
             elif callback.message and hasattr(callback.message, "edit_text"):
                 await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
     except Exception as e:
-        logger.exception(f"[CALLBACK] Ошибка при анализе качеств @{nickname}: {e}")
+        logger.exception(f"[CALLBACK] Ошибка при получении анализа качеств для @{nickname}: {e}")
         error_text = "❌ Произошла ошибка при анализе качеств."
         if callback.inline_message_id and bot is not None:
             await bot.edit_message_text(
@@ -442,39 +478,24 @@ async def handle_get_yesno(callback: CallbackQuery, vox: AsyncVoxAPI):
 @router.callback_query(lambda c: c.data.startswith("get_comp_"))
 async def handle_get_compatibility(callback: CallbackQuery, vox: AsyncVoxAPI):
     await callback.answer()
-    target_nick = callback.data.replace("get_comp_", "") if callback.data else ""
+    target_nick = decode_nickname(callback.data.replace("get_comp_", "")) if callback.data else ""
     user_nick = callback.from_user.username if callback.from_user and callback.from_user.username else str(callback.from_user.id) if callback.from_user else "user"
+    escaped_target_nick = escape_nickname_for_markdown(target_nick)
+    escaped_user_nick = escape_nickname_for_markdown(user_nick)
     logger.info(f"[CALLBACK] Получение совместимости @{user_nick} и @{target_nick}")
     bot = callback.bot
     try:
         if callback.inline_message_id and bot is not None:
             await bot.edit_message_text(
-                f"❤️ **Анализируем совместимость @{user_nick} и @{target_nick}...**\n\n⏳ Пожалуйста, подождите...",
+                f"❤️ **Анализируем совместимость @{escaped_user_nick} и @{escaped_target_nick}...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
                 parse_mode=ParseMode.MARKDOWN
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(f"❤️ **Анализируем совместимость @{user_nick} и @{target_nick}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
-        # Используем тот же промпт, что и для двух никнеймов
-        comp2_prompt = (
-            "Проанализируй совместимость этих людей между собой.\n"
-            "Опиши главные черты каждого из них.\n"
-            "Дай конкретный ответ в процентах насколько люди совместимы.\n"
-            "Текста должно быть немного, все должно быть лаконично.\n"
-            "Главное чтобы было количество процентов совместимости.\n"
-            "Дай ответ на русском языке.\n"
-            "Используй стиль гадания на картах таро, упомяни карты совместимости.\n"
-            "Ответ должен быть полезным и вдохновляющим.\n"
-            "Используй эмодзи в меру для создания атмосферы.\n"
-            "Не используй bullet list.\n"
-            "Не ссылайся на активность человека в конкретных каналах и чатах.\n"
-            "Отвечай на русском языке."
-        )
-        prompt = f"Пользователь 1: {user_nick}\nПользователь 2: {target_nick}\n\n" + comp2_prompt
-        logger.info(f"[PROMPT] Итоговый prompt:\n{prompt}")
-        report = await process_user_nicknames(vox, user_nick, target_nick, prompt)
+            await callback.message.edit_text(f"❤️ **Анализируем совместимость @{escaped_user_nick} и @{escaped_target_nick}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+        report = await process_user_nicknames(vox, user_nick, target_nick, compatibility_prompt)
         if report:
-            formatted = f"❤️ **Совместимость @{user_nick} и @{target_nick}**\n\n{report}"
+            formatted = f"❤️ **Совместимость @{escaped_user_nick} и @{escaped_target_nick}**\n\n{report}"
             if callback.inline_message_id and bot is not None:
                 await bot.edit_message_text(formatted, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.MARKDOWN)
             elif callback.message and hasattr(callback.message, "edit_text"):
@@ -500,39 +521,26 @@ async def handle_get_compatibility_two(callback: CallbackQuery, vox: AsyncVoxAPI
     data = callback.data.replace("get_comp2_", "") if callback.data else ""
     parts = data.split("_")
     if len(parts) >= 2:
-        nick1, nick2 = parts[0], parts[1]
+        nick1 = decode_nickname(parts[0])
+        nick2 = decode_nickname(parts[1])
     else:
         nick1, nick2 = data, ""
+    escaped_nick1 = escape_nickname_for_markdown(nick1)
+    escaped_nick2 = escape_nickname_for_markdown(nick2)
     logger.info(f"[CALLBACK] Получение совместимости двух людей: @{nick1} и @{nick2}")
     bot = callback.bot
     try:
         if callback.inline_message_id and bot is not None:
             await bot.edit_message_text(
-                f"❤️ **Анализируем совместимость @{nick1} и @{nick2}...**\n\n⏳ Пожалуйста, подождите...",
+                f"❤️ **Анализируем совместимость @{escaped_nick1} и @{escaped_nick2}...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
                 parse_mode=ParseMode.MARKDOWN,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(f"❤️ **Анализируем совместимость @{nick1} и @{nick2}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
-        comp2_prompt = (
-            "Проанализируй совместимость этих людей между собой.\n"
-            "Опиши главные черты каждого из них.\n"
-            "Дай конкретный ответ в процентах насколько люди совместимы.\n"
-            "Текста должно быть немного, все должно быть лаконично.\n"
-            "Главное чтобы было количество процентов совместимости.\n"
-            "Дай ответ на русском языке.\n"
-            "Используй стиль гадания на картах таро, упомяни карты совместимости.\n"
-            "Ответ должен быть полезным и вдохновляющим.\n"
-            "Используй эмодзи в меру для создания атмосферы.\n"
-            "Не используй bullet list.\n"
-            "Не ссылайся на активность человека в конкретных каналах и чатах.\n"
-            "Отвечай на русском языке."
-        )
-        prompt = f"Пользователь 1: {nick1}\nПользователь 2: {nick2}\n\n" + comp2_prompt
-        logger.info(f"[PROMPT] Итоговый prompt:\n{prompt}")
-        report = await process_user_nicknames(vox, nick1, nick2, prompt)
+            await callback.message.edit_text(f"❤️ **Анализируем совместимость @{escaped_nick1} и @{escaped_nick2}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+        report = await process_user_nicknames(vox, nick1, nick2, compatibility_prompt)
         if report:
-            formatted = f"❤️ **Совместимость @{nick1} и @{nick2}**\n\n{report}"
+            formatted = f"❤️ **Совместимость @{escaped_nick1} и @{escaped_nick2}**\n\n{report}"
             if callback.inline_message_id and bot is not None:
                 await bot.edit_message_text(
                     formatted,
@@ -552,9 +560,7 @@ async def handle_get_compatibility_two(callback: CallbackQuery, vox: AsyncVoxAPI
             elif callback.message and hasattr(callback.message, "edit_text"):
                 await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
     except Exception as e:
-        logger.exception(
-            f"[CALLBACK] Ошибка при получении совместимости двух людей @{nick1} и @{nick2}: {e}"
-        )
+        logger.exception(f"[CALLBACK] Ошибка при получении совместимости двух людей @{nick1} и @{nick2}: {e}")
         error_text = "❌ Произошла ошибка при анализе совместимости."
         if callback.inline_message_id and bot is not None:
             await bot.edit_message_text(
