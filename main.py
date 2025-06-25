@@ -54,25 +54,6 @@ else:
     mixpanel = None
 
 
-async def show_menu(message: Union[Message, CallbackQuery], db_user: User):
-    if isinstance(message, CallbackQuery):
-        message = message.message
-    
-    nickname = db_user.name
-    zodiac_sign = (
-        get_phrase(phrase_tag=db_user.zodiac_sign, language=get_language(message))
-        if db_user.zodiac_sign
-        else "Не указан"
-    )
-
-    await message.answer(
-        get_phrase(phrase_tag="menu", language=get_language(message))
-        .replace("{nickname}", nickname or db_user.name)
-        .replace("{zodiac_sign}", zodiac_sign),
-        reply_markup=main_menu,
-    )
-
-
 @dp.message(CommandStart())
 async def start_handler(message: Message, state: FSMContext):
     assert message.from_user
@@ -221,20 +202,20 @@ async def handle_callback_query(
                 vox, get_current_username(callback), prediction_prompt
             )
             if report:
-                await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+                await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN, reply_markup=main_menu)
             else:
                 await loading.edit_text(
-                    "Не удалось получить предсказание. Попробуйте позже."
+                    "Не удалось получить предсказание. Попробуйте позже.",
+                    reply_markup=main_menu
                 )
         except Exception as e:
             logger.exception(e)
             await loading.edit_text(
                 get_phrase(
                     phrase_tag="processed_error", language=get_language(callback)
-                )
+                ),
+                reply_markup=main_menu
             )
-        finally:
-            await show_menu(callback.message, db_user)
 
 
 @dp.callback_query(lambda c: c.data.startswith("name_"))
@@ -367,18 +348,18 @@ async def process_question(message: Message, state: FSMContext):
         prompt = f"Вопрос: {question}" + answers_prompt
         report = await process_user_nickname(vox, user_nick, prompt)
         if report:
-            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN, reply_markup=main_menu)
         else:
             await loading.edit_text(
-                "Не удалось получить предсказание. Попробуйте позже."
+                "Не удалось получить предсказание. Попробуйте позже.",
+                reply_markup=main_menu
             )
     except Exception as e:
         logger.exception(e)
         await loading.edit_text(
-            get_phrase(phrase_tag="processed_error", language=get_language(message))
+            get_phrase(phrase_tag="processed_error", language=get_language(message)),
+            reply_markup=main_menu
         )
-    finally:
-        await show_menu(message, user)
 
 
 @dp.message(BotStates.waiting_for_yes_no_question)
@@ -407,18 +388,18 @@ async def process_yes_no(message: Message, state: FSMContext):
         prompt = f"Вопрос: {question}" + yes_no_prompt
         report = await process_user_nickname(vox, user_nick, prompt)
         if report:
-            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN, reply_markup=main_menu)
         else:
             await loading.edit_text(
-                "Не удалось получить предсказание. Попробуйте позже."
+                "Не удалось получить предсказание. Попробуйте позже.",
+                reply_markup=main_menu
             )
     except Exception as e:
         logger.exception(e)
         await loading.edit_text(
-            get_phrase(phrase_tag="processed_error", language=get_language(message))
+            get_phrase(phrase_tag="processed_error", language=get_language(message)),
+            reply_markup=main_menu
         )
-    finally:
-        await show_menu(message, user)
 
 
 @dp.message(BotStates.waiting_for_comp_nick)
@@ -462,19 +443,19 @@ async def process_compatibility(message: Message, state: FSMContext):
             vox, user_nick, target[1:], compatibility_prompt
         )
         if report:
-            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN, reply_markup=main_menu)
         else:
             logger.error(f"[DEBUG] process_compatibility: process_user_nicknames вернул None")
             await loading.edit_text(
-                "Не удалось получить предсказание. Попробуйте позже."
+                "Не удалось получить предсказание. Попробуйте позже.",
+                reply_markup=main_menu
             )
     except Exception as e:
         logger.exception(f"[DEBUG] process_compatibility: ошибка при вызове process_user_nicknames: {e}")
         await loading.edit_text(
-            get_phrase(phrase_tag="processed_error", language=get_language(message))
+            get_phrase(phrase_tag="processed_error", language=get_language(message)),
+            reply_markup=main_menu
         )
-    finally:
-        await show_menu(message, user)
 
 
 @dp.message(BotStates.waiting_for_qualities_nick)
@@ -526,16 +507,18 @@ async def process_qualities(message: Message, state: FSMContext):
                 qualities_prompt["tips"].replace("{info}", target_qualities),
             )
             if report:
-                await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
+                await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN, reply_markup=main_menu)
             else:
                 logger.error(f"[DEBUG] process_qualities: process_user_nicknames вернул None")
                 await loading.edit_text(
-                    "Не удалось получить предсказание. Попробуйте позже."
+                    "Не удалось получить предсказание. Попробуйте позже.",
+                    reply_markup=main_menu
                 )
         else:
             logger.error(f"[DEBUG] process_qualities: process_user_nickname вернул None")
             await loading.edit_text(
-                "Не удалось получить предсказание. Попробуйте позже."
+                "Не удалось получить предсказание. Попробуйте позже.",
+                reply_markup=main_menu
             )
         # report = await process_user_nicknames(
         #     vox, user_nick, target[1:], qualities_prompt
@@ -549,10 +532,8 @@ async def process_qualities(message: Message, state: FSMContext):
     except Exception as e:
         logger.exception(f"[DEBUG] process_qualities: ошибка при обработке: {e}")
         await loading.edit_text(
-            get_phrase(phrase_tag="processed_error", language=get_language(message))
+            get_phrase(phrase_tag="processed_error", language=get_language(message)), reply_markup=main_menu
         )
-    finally:
-        await show_menu(message, user)
 
 
 @dp.message()
