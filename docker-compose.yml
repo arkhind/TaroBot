@@ -1,8 +1,26 @@
 services:
+  postgres:
+    image: postgres:15
+    container_name: tarobot_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tarobot
+      POSTGRES_USER: tarobot_user
+      POSTGRES_PASSWORD: tarobot_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   tarobot:
     build: .
     container_name: tarobot
     restart: unless-stopped
+    depends_on:
+      - postgres
     volumes:
       # Монтируем .env файл для переменных окружения
       - ./.env:/app/.env
+
+volumes:
+  postgres_data:

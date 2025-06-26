@@ -27,7 +27,7 @@ from mixpanel import Mixpanel
 from config import MIXPANEL_TOKEN
 
 router = Router()
-mp = Mixpanel(MIXPANEL_TOKEN)
+mp = Mixpanel(MIXPANEL_TOKEN) if MIXPANEL_TOKEN else None
 
 
 def encode_nickname(nickname: str) -> str:
@@ -66,10 +66,17 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
     query_type = 'nickname' if query.startswith("@") or (
         query and all(c.isalnum() or c == "_" for c in query) and len(query) < 30
     ) else 'question'
-    mp.track(user_id, 'inline_query', {
-        'query': query,
-        'query_type': query_type
-    })
+    
+    if mp:
+        mp.track(
+            distinct_id=str(user_id) if user_id else "anonymous",
+            event_name="inline_query",
+            properties={
+                "telegram_user_id": user_id,
+                "query": query,
+                "query_type": query_type
+            },
+        )
 
     if not query:
         logger.info("[INLINE] Пустой запрос, отправляю инструкцию")
@@ -242,6 +249,17 @@ async def handle_get_prediction(callback: CallbackQuery, vox: AsyncVoxAPI):
     nickname = decode_nickname(callback.data.replace("get_pred_", "")) if callback.data else ""
     escaped_nickname = escape_nickname_for_markdown(nickname)
     logger.info(f"[CALLBACK] Получение предсказания для @{nickname}")
+    
+    if mp:
+        mp.track(
+            distinct_id=str(callback.from_user.id) if callback.from_user else "anonymous",
+            event_name="inline_prediction",
+            properties={
+                "telegram_user_id": callback.from_user.id if callback.from_user else None,
+                "target_nickname": nickname
+            },
+        )
+    
     bot = callback.bot
     try:
         if callback.inline_message_id and bot is not None:
@@ -309,6 +327,17 @@ async def handle_get_question(callback: CallbackQuery, vox: AsyncVoxAPI):
     await callback.answer()
     question = callback.data.replace("get_q_", "") if callback.data else ""
     logger.info(f"[CALLBACK] Получение ответа на вопрос: {question}")
+    
+    if mp:
+        mp.track(
+            distinct_id=str(callback.from_user.id) if callback.from_user else "anonymous",
+            event_name="inline_question",
+            properties={
+                "telegram_user_id": callback.from_user.id if callback.from_user else None,
+                "question": question[:100]  # Ограничиваем длину вопроса
+            },
+        )
+    
     bot = callback.bot
     user_nick = (
         callback.from_user.username
@@ -365,6 +394,17 @@ async def handle_get_qualities(callback: CallbackQuery, vox: AsyncVoxAPI):
     nickname = decode_nickname(callback.data.replace("get_qual_", "")) if callback.data else ""
     escaped_nickname = escape_nickname_for_markdown(nickname)
     logger.info(f"[CALLBACK] Получение анализа качеств для @{nickname}")
+    
+    if mp:
+        mp.track(
+            distinct_id=str(callback.from_user.id) if callback.from_user else "anonymous",
+            event_name="inline_qualities",
+            properties={
+                "telegram_user_id": callback.from_user.id if callback.from_user else None,
+                "target_nickname": nickname
+            },
+        )
+    
     bot = callback.bot
     try:
         if callback.inline_message_id and bot is not None:
@@ -375,17 +415,11 @@ async def handle_get_qualities(callback: CallbackQuery, vox: AsyncVoxAPI):
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
             await callback.message.edit_text(f"🔮 **Анализируем качества @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
-        target_qualities = await process_user_nickname(
+        result = await process_user_nickname(
             vox, nickname, qualities_prompt["people_qualities"]
         )
-        if target_qualities:
-            user_id = str(callback.from_user.id) if callback.from_user else "user"
-            advice_prompt = qualities_prompt["tips"].replace("{info}", target_qualities)
-            advice = await process_user_nicknames(vox, user_id, nickname, advice_prompt)
-            if advice:
-                formatted = f"🔮 **Анализ качеств @{escaped_nickname}**\n\n**Качества:**\n{target_qualities}\n\n**Советы для взаимодействия:**\n{advice}"
-            else:
-                formatted = f"🔮 **Анализ качеств @{escaped_nickname}**\n\n**Качества:**\n{target_qualities}"
+        if result:
+            formatted = f"🔮 **Анализ качеств @{escaped_nickname}**\n\n{result}"
             if callback.inline_message_id and bot is not None:
                 await bot.edit_message_text(
                     formatted,
@@ -422,6 +456,17 @@ async def handle_get_yesno(callback: CallbackQuery, vox: AsyncVoxAPI):
     await callback.answer()
     question = callback.data.replace("get_yesno_", "") if callback.data else ""
     logger.info(f"[CALLBACK] Получение ответа да/нет на вопрос: {question}")
+    
+    if mp:
+        mp.track(
+            distinct_id=str(callback.from_user.id) if callback.from_user else "anonymous",
+            event_name="inline_yesno",
+            properties={
+                "telegram_user_id": callback.from_user.id if callback.from_user else None,
+                "question": question[:100]  # Ограничиваем длину вопроса
+            },
+        )
+    
     bot = callback.bot
     user_nick = (
         callback.from_user.username
@@ -483,6 +528,18 @@ async def handle_get_compatibility(callback: CallbackQuery, vox: AsyncVoxAPI):
     escaped_target_nick = escape_nickname_for_markdown(target_nick)
     escaped_user_nick = escape_nickname_for_markdown(user_nick)
     logger.info(f"[CALLBACK] Получение совместимости @{user_nick} и @{target_nick}")
+    
+    if mp:
+        mp.track(
+            distinct_id=str(callback.from_user.id) if callback.from_user else "anonymous",
+            event_name="inline_compatibility",
+            properties={
+                "telegram_user_id": callback.from_user.id if callback.from_user else None,
+                "user_nickname": user_nick,
+                "target_nickname": target_nick
+            },
+        )
+    
     bot = callback.bot
     try:
         if callback.inline_message_id and bot is not None:
@@ -528,6 +585,18 @@ async def handle_get_compatibility_two(callback: CallbackQuery, vox: AsyncVoxAPI
     escaped_nick1 = escape_nickname_for_markdown(nick1)
     escaped_nick2 = escape_nickname_for_markdown(nick2)
     logger.info(f"[CALLBACK] Получение совместимости двух людей: @{nick1} и @{nick2}")
+    
+    if mp:
+        mp.track(
+            distinct_id=str(callback.from_user.id) if callback.from_user else "anonymous",
+            event_name="inline_compatibility_two",
+            properties={
+                "telegram_user_id": callback.from_user.id if callback.from_user else None,
+                "nickname1": nick1,
+                "nickname2": nick2
+            },
+        )
+    
     bot = callback.bot
     try:
         if callback.inline_message_id and bot is not None:
