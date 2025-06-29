@@ -13,6 +13,11 @@ compatibility_prompt = (
     .read()
     .replace("{global_prompt}", _global_prompt)
 )
+compatibility_of_2_prompt = (
+    open("prompts/compatibility_of_2_prompt.txt")
+    .read()
+    .replace("{global_prompt}", _global_prompt)
+)
 # qualities_prompt_ = open("prompts/qualities_prompt.txt").read().replace("{global_prompt}", _global_prompt)
 qualities_prompt_raw = yaml.load(
     open("prompts/qualities.yaml").read(),

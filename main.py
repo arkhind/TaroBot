@@ -16,7 +16,7 @@ from mixpanel import Mixpanel
 
 import config
 from config import BOT_TOKEN, VOX_TOKEN
-from keyboards import main_menu, get_name_keyboard
+from keyboards import main_menu, get_name_keyboard, get_zodiac_keyboard
 from vox_executable import process_user_nickname, process_user_nicknames
 from db.User import User
 from vox.asyncapi import AsyncVoxAPI
@@ -38,7 +38,7 @@ class BotStates(StatesGroup):
     waiting_for_comp_nick = State()
     waiting_for_qualities_nick = State()
     waiting_for_name = State()
-    waiting_for_birth_date = State()
+    waiting_for_zodiac = State()
 
 
 # Инициализация бота и диспетчера с FSM
@@ -230,11 +230,12 @@ async def handle_name_callback(callback: CallbackQuery, state: FSMContext):
     # Сохраняем имя в состоянии
     await state.update_data(name=name)
 
-    # Переходим к запросу даты рождения
+    # Показываем клавиатуру выбора знака зодиака
     await callback.message.answer(
-        get_phrase(phrase_tag="ask_birth_date", language=get_language(callback))
+        get_phrase(phrase_tag="ask_zodiac_sign", language=get_language(callback)),
+        reply_markup=get_zodiac_keyboard()
     )
-    await state.set_state(BotStates.waiting_for_birth_date)
+    await state.set_state(BotStates.waiting_for_zodiac)
 
 
 @dp.message(BotStates.waiting_for_name)
@@ -247,79 +248,65 @@ async def process_name_input(message: Message, state: FSMContext):
 
     await state.update_data(name=name)
     await message.answer(
-        get_phrase(phrase_tag="ask_birth_date", language=get_language(message))
+        get_phrase(phrase_tag="ask_zodiac_sign", language=get_language(message)),
+        reply_markup=get_zodiac_keyboard()
     )
-    await state.set_state(BotStates.waiting_for_birth_date)
+    await state.set_state(BotStates.waiting_for_zodiac)
 
 
-@dp.message(BotStates.waiting_for_birth_date)
-async def process_birth_date(message: Message, state: FSMContext):
-    try:
-        assert message.from_user
-        # Парсим дату в формате ДД.ММ.ГГГГ
-        birth_date = datetime.strptime(message.text.strip(), "%d.%m.%Y").date()
+@dp.callback_query(lambda c: c.data.startswith("zodiac_"))
+async def handle_zodiac_callback(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    
+    # Получаем выбранный знак зодиака (тег уже содержит zodiac_)
+    zodiac_tag = callback.data
+    
+    # Получаем сохраненное имя
+    data = await state.get_data()
+    name = data.get("name", "Пользователь")
 
-        # Получаем сохраненное имя
-        data = await state.get_data()
-        name = data.get("name", "Пользователь")
+    # Получаем перевод знака зодиака
+    zodiac_sign = get_phrase(phrase_tag=zodiac_tag, language=get_language(callback))
 
-        # Определяем знак зодиака (получаем тег)
-        zodiac_tag = get_zodiac_sign(birth_date)
+    # Сохраняем данные в БД
+    user = await User.aio_get(
+        telegram_user_id=callback.from_user.id, telegram_chat_id=callback.message.chat.id
+    )
+    user.name = name
+    user.birth_date = None  # Больше не сохраняем дату рождения
+    user.zodiac_sign = zodiac_tag  # Сохраняем полный тег
+    await user.aio_save()
 
-        # Получаем перевод знака зодиака
-        zodiac_sign = get_phrase(phrase_tag=zodiac_tag, language=get_language(message))
+    # Очищаем состояние
+    await state.clear()
 
-        # Сохраняем данные в БД
-        user = await User.aio_get(
-            telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
+    if mixpanel:
+        mixpanel.track(
+            distinct_id=str(callback.from_user.id),
+            event_name="finish_registration",
+            properties={
+                "telegram_user_id": callback.from_user.id,
+                "telegram_chat_id": callback.message.chat.id,
+                "user_id": user.user_id,
+            },
         )
-        user.name = name
-        user.birth_date = birth_date
-        user.zodiac_sign = zodiac_tag  # Сохраняем тег, а не перевод
-        await user.aio_save()
+    
+    # Отправляем сообщение о завершении регистрации
+    await callback.message.answer(
+        get_phrase(
+            phrase_tag="registration_complete", language=get_language(callback)
+        ).replace("{zodiac_sign}", zodiac_sign)
+    )
+    logger.info(f"User registered {user.user_id}")
 
-        # Очищаем состояние
-        await state.clear()
-
-        user = await User.aio_get(
-            telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
-        )
-        if mixpanel:
-            mixpanel.track(
-                distinct_id=str(message.from_user.id),
-                event_name="finish_registration",
-                properties={
-                    "telegram_user_id": message.from_user.id,
-                    "telegram_chat_id": message.chat.id,
-                    "user_id": user.user_id,
-                },
-            )
-        # Отправляем сообщение о завершении регистрации
-        await message.answer(
-            get_phrase(
-                phrase_tag="registration_complete", language=get_language(message)
-            ).replace("{zodiac_sign}", zodiac_sign)
-        )
-        logger.info(f"User registered {user.user_id}")
-
-        # Показываем главное меню
-        nickname = name
-        await message.answer(
-            get_phrase(phrase_tag="menu", language=get_language(message))
-            .replace("{nickname}", nickname)
-            .replace("{zodiac_sign}", zodiac_sign),
-            reply_markup=main_menu,
-        )
-
-    except ValueError:
-        await message.answer(
-            "Неверный формат даты. Используйте формат ДД.ММ.ГГГГ (например, 15.03.1990)"
-        )
-    except Exception as e:
-        logger.exception(e)
-        await message.answer(
-            "Произошла ошибка при сохранении данных. Попробуйте еще раз."
-        )
+    # Показываем главное меню
+    nickname = name
+    await callback.message.answer(
+        get_phrase(phrase_tag="menu", language=get_language(callback))
+        .replace("{nickname}", nickname)
+        .replace("{zodiac_sign}", zodiac_sign),
+        reply_markup=main_menu,
+    )
 
 
 @dp.message(BotStates.waiting_for_question)

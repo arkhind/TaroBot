@@ -21,6 +21,7 @@ from prompts import (
     answers_prompt,
     yes_no_prompt,
     compatibility_prompt,
+    compatibility_of_2_prompt,
 )
 from utils.nickname_codec import encode_nickname, decode_nickname
 from mixpanel import Mixpanel
@@ -607,7 +608,7 @@ async def handle_get_compatibility_two(callback: CallbackQuery, vox: AsyncVoxAPI
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
             await callback.message.edit_text(f"❤️ **Анализируем совместимость @{escaped_nick1} и @{escaped_nick2}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
-        report = await process_user_nicknames(vox, nick1, nick2, compatibility_prompt)
+        report = await process_user_nicknames(vox, nick1, nick2, compatibility_of_2_prompt)
         if report:
             formatted = f"❤️ **Совместимость @{escaped_nick1} и @{escaped_nick2}**\n\n{report}"
             if callback.inline_message_id and bot is not None:
