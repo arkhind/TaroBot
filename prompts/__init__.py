@@ -31,3 +31,8 @@ prediction_prompt = (
     .read()
     .replace("{global_prompt}", _global_prompt)
 )
+daily_prediction_prompt = (
+    open("prompts/daily_prediction_prompt.txt")
+    .read()
+    .replace("{global_prompt}", _global_prompt)
+)

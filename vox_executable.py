@@ -30,7 +30,6 @@ async def process_user_nickname(vox: AsyncVoxAPI, nickname, prompt):
         logger.info(f"[DEBUG] process_user_nickname: получаем AI аналитику для {nickname}")
         ai_analytic = await vox.ai_analytics(subject=Subject.USER, subject_id=user_id)
         logger.info(f"[DEBUG] process_user_nickname: AI аналитика получена: {type(ai_analytic)}")
-        logger.info(f"[DEBUG] process_user_nickname: AI аналитика содержимое: {ai_analytic}")
         
         # Проверяем, есть ли данные от VOX
         if ai_analytic is None or (isinstance(ai_analytic, dict) and not ai_analytic.get("report")):
@@ -50,7 +49,6 @@ async def process_user_nickname(vox: AsyncVoxAPI, nickname, prompt):
             )
         
         logger.info(f"[DEBUG] process_user_nickname: кастомный отчет получен: {type(report)}")
-        logger.info(f"[DEBUG] process_user_nickname: кастомный отчет содержимое: {report}")
         
         # Проверяем, есть ли report в ответе
         if report and "report" in report and report["report"]:

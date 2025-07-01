@@ -3,6 +3,7 @@ import asyncio
 from datetime import datetime
 from loguru import logger
 import uuid
+import html
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart, Command
@@ -26,6 +27,10 @@ from utils.login_requied import only_registered, only_registered_callback
 from utils.zodiac import get_zodiac_sign
 from inline_daily_prediction import router as inline_router, VoxMiddleware
 from typing import Union
+from send_weekly_prediction import send_weekly_predictions
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+import pytz
 
 # Загружаем промпты
 from prompts import *
@@ -199,10 +204,10 @@ async def handle_callback_query(
             )
         try:
             report = await process_user_nickname(
-                vox, get_current_username(callback), prediction_prompt
+                vox, get_current_username(callback), daily_prediction_prompt
             )
             if report:
-                await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN, reply_markup=main_menu)
+                await loading.edit_text(report, parse_mode=ParseMode.HTML, reply_markup=main_menu)
             else:
                 await loading.edit_text(
                     "Не удалось получить предсказание. Попробуйте позже.",
@@ -332,10 +337,11 @@ async def process_question(message: Message, state: FSMContext):
             },
         )
     try:
-        prompt = f"Вопрос: {question}" + answers_prompt
+        prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>, <code>код</code>, <a href="https://t.me/{username}">ссылка</a> и т.д. Не используй Markdown.'
+        prompt = f"Вопрос: {question}" + answers_prompt + prediction_html_instruction
         report = await process_user_nickname(vox, user_nick, prompt)
         if report:
-            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN, reply_markup=main_menu)
+            await loading.edit_text(report, parse_mode=ParseMode.HTML, reply_markup=main_menu)
         else:
             await loading.edit_text(
                 "Не удалось получить предсказание. Попробуйте позже.",
@@ -372,10 +378,11 @@ async def process_yes_no(message: Message, state: FSMContext):
             },
         )
     try:
-        prompt = f"Вопрос: {question}" + yes_no_prompt
+        prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>, <code>код</code>, <a href="https://t.me/{username}">ссылка</a> и т.д. Не используй Markdown.'
+        prompt = f"Вопрос: {question}" + yes_no_prompt + prediction_html_instruction
         report = await process_user_nickname(vox, user_nick, prompt)
         if report:
-            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN, reply_markup=main_menu)
+            await loading.edit_text(report, parse_mode=ParseMode.HTML, reply_markup=main_menu)
         else:
             await loading.edit_text(
                 "Не удалось получить предсказание. Попробуйте позже.",
@@ -426,11 +433,12 @@ async def process_compatibility(message: Message, state: FSMContext):
         )
     try:
         logger.info(f"[DEBUG] process_compatibility: вызываем process_user_nicknames с {user_nick} и {target[1:]}")
+        prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>, <code>код</code>, <a href="https://t.me/{username}">ссылка</a> и т.д. Не используй Markdown.'
         report = await process_user_nicknames(
-            vox, user_nick, target[1:], compatibility_prompt
+            vox, user_nick, target[1:], compatibility_prompt + prediction_html_instruction
         )
         if report:
-            await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN, reply_markup=main_menu)
+            await loading.edit_text(report, parse_mode=ParseMode.HTML, reply_markup=main_menu)
         else:
             logger.error(f"[DEBUG] process_compatibility: process_user_nicknames вернул None")
             await loading.edit_text(
@@ -487,14 +495,15 @@ async def process_qualities(message: Message, state: FSMContext):
         )  ## получаем качества target'а
         if target_qualities:
             logger.info(f"[DEBUG] process_qualities: качества получены, вызываем process_user_nicknames")
+            prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>, <code>код</code>, <a href="https://t.me/{username}">ссылка</a> и т.д. Не используй Markdown.'
             report = await process_user_nicknames(
                 vox,
                 user_nick,
                 target[1:],
-                qualities_prompt["tips"].replace("{info}", target_qualities),
+                qualities_prompt["tips"].replace("{info}", target_qualities) + prediction_html_instruction,
             )
             if report:
-                await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN, reply_markup=main_menu)
+                await loading.edit_text(report, parse_mode=ParseMode.HTML, reply_markup=main_menu)
             else:
                 logger.error(f"[DEBUG] process_qualities: process_user_nicknames вернул None")
                 await loading.edit_text(
@@ -535,9 +544,18 @@ async def main():
         logger.error("BOT_TOKEN не найден")
         return
 
+    # Планировщик рассылки
+    scheduler = AsyncIOScheduler(timezone=pytz.timezone("Europe/Moscow"))
+    scheduler.add_job(
+        send_weekly_predictions,
+        CronTrigger(day_of_week='mon', hour=7, minute=0),
+        name="Weekly predictions"
+    )
+    scheduler.start()
+
     # Инициализируем бота с поддержкой inline режима
     bot = Bot(
-        token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
+        token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     vox = AsyncVoxAPI(token=VOX_TOKEN)
 

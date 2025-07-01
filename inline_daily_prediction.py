@@ -12,6 +12,7 @@ from aiogram.enums import ParseMode
 from loguru import logger
 import re
 import json
+import html
 
 from vox.asyncapi import AsyncVoxAPI
 from vox_executable import process_user_nickname, process_user_nicknames
@@ -22,6 +23,7 @@ from prompts import (
     yes_no_prompt,
     compatibility_prompt,
     compatibility_of_2_prompt,
+    daily_prediction_prompt,
 )
 from utils.nickname_codec import encode_nickname, decode_nickname
 from mixpanel import Mixpanel
@@ -118,7 +120,7 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
                 description="Узнать совместимость между двумя людьми",
                 input_message_content=InputTextMessageContent(
                     message_text=f"❤️ **Совместимость @{escaped_nick1} и @{escaped_nick2}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 ),
                 reply_markup=InlineKeyboardMarkup(
                     inline_keyboard=[
@@ -154,7 +156,7 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
                 description="Получить предсказание на день",
                 input_message_content=InputTextMessageContent(
                     message_text=f"🔮 **Предсказание на день для @{escaped_nickname}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 ),
                 reply_markup=InlineKeyboardMarkup(
                     inline_keyboard=[
@@ -173,7 +175,7 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
                 description="Анализировать качества и получить советы",
                 input_message_content=InputTextMessageContent(
                     message_text=f"🔍 **Анализ качеств @{escaped_nickname}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 ),
                 reply_markup=InlineKeyboardMarkup(
                     inline_keyboard=[
@@ -192,7 +194,7 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
                 description="Узнать совместимость с этим человеком",
                 input_message_content=InputTextMessageContent(
                     message_text=f"❤️ **Совместимость с @{escaped_nickname}**\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 ),
                 reply_markup=InlineKeyboardMarkup(
                     inline_keyboard=[
@@ -221,7 +223,7 @@ async def inline_prediction_handler(inline_query: InlineQuery, vox: AsyncVoxAPI)
                 description="Нажмите, чтобы получить ответ на ваш вопрос",
                 input_message_content=InputTextMessageContent(
                     message_text=f"🔮 **Вопрос:** {query}\n\n⏳ Ожидайте...\n\nНажмите кнопку ниже, чтобы получить результат.",
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 ),
                 reply_markup=InlineKeyboardMarkup(
                     inline_keyboard=[
@@ -267,26 +269,11 @@ async def handle_get_prediction(callback: CallbackQuery, vox: AsyncVoxAPI):
             await bot.edit_message_text(
                 f"🔮 **Получаем предсказание для @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.HTML,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(f"🔮 **Получаем предсказание для @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
-        daily_prompt = (
-            f"""
-Предсказание на день для пользователя с никнеймом: {nickname}
-
-Создай подробное предсказание на сегодняшний день для этого человека. 
-Включи в предсказание:
-- Общий настрой дня
-- Возможные события и встречи
-- Советы на день
-- Что стоит делать, а чего избегать
-- Энергетический прогноз
-
-Сделай предсказание позитивным и мотивирующим, но реалистичным.
-"""
-            + prediction_prompt
-        )
+            await callback.message.edit_text(f"🔮 **Получаем предсказание для @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        daily_prompt = daily_prediction_prompt
         prediction = await process_user_nickname(vox, nickname, daily_prompt)
         if prediction:
             formatted = f"🔮 **Предсказание на день для @{escaped_nickname}**\n\n{prediction}"
@@ -294,20 +281,20 @@ async def handle_get_prediction(callback: CallbackQuery, vox: AsyncVoxAPI):
                 await bot.edit_message_text(
                     formatted,
                     inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 )
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         else:
             error_text = "❌ Не удалось получить предсказание. Попробуйте позже."
             if callback.inline_message_id and bot is not None:
                 await bot.edit_message_text(
                     error_text,
                     inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 )
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(
             f"[CALLBACK] Ошибка при получении предсказания для @{nickname}: {e}"
@@ -317,10 +304,10 @@ async def handle_get_prediction(callback: CallbackQuery, vox: AsyncVoxAPI):
             await bot.edit_message_text(
                 error_text,
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.HTML,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
 
 
 @router.callback_query(lambda c: c.data.startswith("get_q_"))
@@ -350,10 +337,10 @@ async def handle_get_question(callback: CallbackQuery, vox: AsyncVoxAPI):
             await bot.edit_message_text(
                 f"🔮 **Получаем ответ на вопрос...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.HTML,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(f"🔮 **Получаем ответ на вопрос...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(f"🔮 **Получаем ответ на вопрос...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         question_prompt = f"Вопрос: {question}" + answers_prompt
         answer = await process_user_nickname(vox, user_nick, question_prompt)
         if answer:
@@ -362,20 +349,20 @@ async def handle_get_question(callback: CallbackQuery, vox: AsyncVoxAPI):
                 await bot.edit_message_text(
                     formatted,
                     inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 )
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         else:
             error_text = "❌ Не удалось получить ответ. Попробуйте позже."
             if callback.inline_message_id and bot is not None:
                 await bot.edit_message_text(
                     error_text,
                     inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 )
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(f"[CALLBACK] Ошибка при получении ответа на вопрос: {e}")
         error_text = "❌ Произошла ошибка при получении ответа."
@@ -383,10 +370,10 @@ async def handle_get_question(callback: CallbackQuery, vox: AsyncVoxAPI):
             await bot.edit_message_text(
                 error_text,
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.HTML,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
 
 
 @router.callback_query(lambda c: c.data.startswith("get_qual_"))
@@ -412,10 +399,10 @@ async def handle_get_qualities(callback: CallbackQuery, vox: AsyncVoxAPI):
             await bot.edit_message_text(
                 f"🔮 **Анализируем качества @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.HTML,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(f"🔮 **Анализируем качества @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(f"🔮 **Анализируем качества @{escaped_nickname}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         result = await process_user_nickname(
             vox, nickname, qualities_prompt["people_qualities"]
         )
@@ -425,20 +412,20 @@ async def handle_get_qualities(callback: CallbackQuery, vox: AsyncVoxAPI):
                 await bot.edit_message_text(
                     formatted,
                     inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 )
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         else:
             error_text = "❌ Не удалось проанализировать качества. Попробуйте позже."
             if callback.inline_message_id and bot is not None:
                 await bot.edit_message_text(
                     error_text,
                     inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 )
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(f"[CALLBACK] Ошибка при получении анализа качеств для @{nickname}: {e}")
         error_text = "❌ Произошла ошибка при анализе качеств."
@@ -446,10 +433,10 @@ async def handle_get_qualities(callback: CallbackQuery, vox: AsyncVoxAPI):
             await bot.edit_message_text(
                 error_text,
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.HTML,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
 
 
 @router.callback_query(lambda c: c.data.startswith("get_yesno_"))
@@ -479,10 +466,10 @@ async def handle_get_yesno(callback: CallbackQuery, vox: AsyncVoxAPI):
             await bot.edit_message_text(
                 f"🔮 **Получаем ответ Да/Нет...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.HTML,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(f"🔮 **Получаем ответ Да/Нет...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(f"🔮 **Получаем ответ Да/Нет...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         yesno_prompt_full = (
             f"Вопрос: {question}\n\nДай ответ Да или Нет с подробным объяснением."
             + yes_no_prompt
@@ -494,20 +481,20 @@ async def handle_get_yesno(callback: CallbackQuery, vox: AsyncVoxAPI):
                 await bot.edit_message_text(
                     formatted,
                     inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 )
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         else:
             error_text = "❌ Не удалось получить ответ. Попробуйте позже."
             if callback.inline_message_id and bot is not None:
                 await bot.edit_message_text(
                     error_text,
                     inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 )
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(f"[CALLBACK] Ошибка при получении ответа да/нет: {e}")
         error_text = "❌ Произошла ошибка при получении ответа Да/Нет."
@@ -515,10 +502,10 @@ async def handle_get_yesno(callback: CallbackQuery, vox: AsyncVoxAPI):
             await bot.edit_message_text(
                 error_text,
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.HTML,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
 
 
 @router.callback_query(lambda c: c.data.startswith("get_comp_"))
@@ -547,30 +534,30 @@ async def handle_get_compatibility(callback: CallbackQuery, vox: AsyncVoxAPI):
             await bot.edit_message_text(
                 f"❤️ **Анализируем совместимость @{escaped_user_nick} и @{escaped_target_nick}...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN
+                parse_mode=ParseMode.HTML
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(f"❤️ **Анализируем совместимость @{escaped_user_nick} и @{escaped_target_nick}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(f"❤️ **Анализируем совместимость @{escaped_user_nick} и @{escaped_target_nick}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         report = await process_user_nicknames(vox, user_nick, target_nick, compatibility_prompt)
         if report:
             formatted = f"❤️ **Совместимость @{escaped_user_nick} и @{escaped_target_nick}**\n\n{report}"
             if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(formatted, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.MARKDOWN)
+                await bot.edit_message_text(formatted, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.HTML)
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         else:
             error_text = "❌ Не удалось получить совместимость. Попробуйте позже."
             if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(error_text, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.MARKDOWN)
+                await bot.edit_message_text(error_text, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.HTML)
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(f"[CALLBACK] Ошибка при получении совместимости @{user_nick} и @{target_nick}: {e}")
         error_text = "❌ Произошла ошибка при анализе совместимости."
         if callback.inline_message_id and bot is not None:
-            await bot.edit_message_text(error_text, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.MARKDOWN)
+            await bot.edit_message_text(error_text, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.HTML)
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
 
 
 @router.callback_query(lambda c: c.data.startswith("get_comp2_"))
@@ -604,10 +591,10 @@ async def handle_get_compatibility_two(callback: CallbackQuery, vox: AsyncVoxAPI
             await bot.edit_message_text(
                 f"❤️ **Анализируем совместимость @{escaped_nick1} и @{escaped_nick2}...**\n\n⏳ Пожалуйста, подождите...",
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.HTML,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(f"❤️ **Анализируем совместимость @{escaped_nick1} и @{escaped_nick2}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(f"❤️ **Анализируем совместимость @{escaped_nick1} и @{escaped_nick2}...**\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         report = await process_user_nicknames(vox, nick1, nick2, compatibility_of_2_prompt)
         if report:
             formatted = f"❤️ **Совместимость @{escaped_nick1} и @{escaped_nick2}**\n\n{report}"
@@ -615,20 +602,20 @@ async def handle_get_compatibility_two(callback: CallbackQuery, vox: AsyncVoxAPI
                 await bot.edit_message_text(
                     formatted,
                     inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 )
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         else:
             error_text = "❌ Не удалось получить совместимость. Попробуйте позже."
             if callback.inline_message_id and bot is not None:
                 await bot.edit_message_text(
                     error_text,
                     inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.MARKDOWN,
+                    parse_mode=ParseMode.HTML,
                 )
             elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(f"[CALLBACK] Ошибка при получении совместимости двух людей @{nick1} и @{nick2}: {e}")
         error_text = "❌ Произошла ошибка при анализе совместимости."
@@ -636,7 +623,7 @@ async def handle_get_compatibility_two(callback: CallbackQuery, vox: AsyncVoxAPI
             await bot.edit_message_text(
                 error_text,
                 inline_message_id=callback.inline_message_id,
-                parse_mode=ParseMode.MARKDOWN,
+                parse_mode=ParseMode.HTML,
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
-            await callback.message.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)  # type: ignore[attr-defined]
+            await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
