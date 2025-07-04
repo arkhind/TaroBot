@@ -4,6 +4,7 @@ from datetime import datetime
 from loguru import logger
 import uuid
 import html
+import traceback
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart, Command
@@ -14,6 +15,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.client.default import DefaultBotProperties
 from mixpanel import Mixpanel
+import aiogram.exceptions
+from vox.exceptions import ApiError, NotFoundError
 
 import config
 from config import BOT_TOKEN, VOX_TOKEN
@@ -160,6 +163,7 @@ async def menu_handler(message: Message, db_user: User):
 async def handle_callback_query(
     callback: CallbackQuery, state: FSMContext, db_user: User
 ):
+    logger.info(f"[CALLBACK] Нажата кнопка: {callback.data} от user_id={callback.from_user.id if callback.from_user else 'unknown'}")
     await callback.answer()
     nickname = db_user.name
     if not nickname:
@@ -337,7 +341,7 @@ async def process_question(message: Message, state: FSMContext):
             },
         )
     try:
-        prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>, <code>код</code>, <a href="https://t.me/{username}">ссылка</a> и т.д. Не используй Markdown.'
+        prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
         prompt = f"Вопрос: {question}" + answers_prompt + prediction_html_instruction
         report = await process_user_nickname(vox, user_nick, prompt)
         if report:
@@ -378,7 +382,7 @@ async def process_yes_no(message: Message, state: FSMContext):
             },
         )
     try:
-        prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>, <code>код</code>, <a href="https://t.me/{username}">ссылка</a> и т.д. Не используй Markdown.'
+        prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
         prompt = f"Вопрос: {question}" + yes_no_prompt + prediction_html_instruction
         report = await process_user_nickname(vox, user_nick, prompt)
         if report:
@@ -433,7 +437,7 @@ async def process_compatibility(message: Message, state: FSMContext):
         )
     try:
         logger.info(f"[DEBUG] process_compatibility: вызываем process_user_nicknames с {user_nick} и {target[1:]}")
-        prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>, <code>код</code>, <a href="https://t.me/{username}">ссылка</a> и т.д. Не используй Markdown.'
+        prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
         report = await process_user_nicknames(
             vox, user_nick, target[1:], compatibility_prompt + prediction_html_instruction
         )
@@ -495,7 +499,7 @@ async def process_qualities(message: Message, state: FSMContext):
         )  ## получаем качества target'а
         if target_qualities:
             logger.info(f"[DEBUG] process_qualities: качества получены, вызываем process_user_nicknames")
-            prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>, <code>код</code>, <a href="https://t.me/{username}">ссылка</a> и т.д. Не используй Markdown.'
+            prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
             report = await process_user_nicknames(
                 vox,
                 user_nick,
@@ -533,9 +537,30 @@ async def process_qualities(message: Message, state: FSMContext):
 
 
 @dp.message()
-@only_registered
-async def fallback(message: Message, user_db: User):
-    await message.answer("Пожалуйста, используйте кнопки меню (/menu).")
+async def fallback(message: Message):
+    if message.chat.type == "private":
+        await message.answer("Пожалуйста, используйте кнопки меню (/menu).")
+
+
+async def on_error(update, exception):
+    # Логируем все ошибки
+    logger.error(f"[on_error] {exception}")
+    # Фильтрация ошибок, которые не нужно отправлять в группу
+    if isinstance(exception, aiogram.exceptions.TelegramBadRequest):
+        if "query is too old" in str(exception) or "response timeout expired" in str(exception) or "query ID is invalid" in str(exception):
+            return True  # Не отправлять в группу
+    if isinstance(exception, NotFoundError):
+        return True
+    if isinstance(exception, ApiError):
+        return True
+    # Для остальных ошибок отправлять в группу
+    import traceback
+    error_text = f"<b>❗️ В боте произошла ошибка:</b>\n<pre>{traceback.format_exc()}</pre>"
+    try:
+        await bot.send_message(config.ERROR_CHAT_ID, error_text)
+    except Exception as e:
+        logger.error(f"Не удалось отправить ошибку в группу: {e}")
+    return True
 
 
 async def main():
@@ -568,7 +593,11 @@ async def main():
 
     # Запускаем бота
     logger.info(f"Бот запущен на {bot.id}")
-    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    await dp.start_polling(
+        bot,
+        allowed_updates=dp.resolve_used_update_types(),
+        on_error=on_error
+    )
 
 
 if __name__ == "__main__":

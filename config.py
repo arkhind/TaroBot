@@ -13,3 +13,5 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 # os.getenv для необязательных полей. Вернет None если нет
 
 MIXPANEL_TOKEN = os.getenv("MIXPANEL_TOKEN")
+
+ERROR_CHAT_ID = int(os.environ["ERROR_CHAT_ID"])
