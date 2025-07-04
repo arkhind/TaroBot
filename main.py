@@ -5,6 +5,8 @@ from loguru import logger
 import uuid
 import html
 import traceback
+import concurrent.futures
+import os
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart, Command
@@ -249,18 +251,28 @@ async def handle_name_callback(callback: CallbackQuery, state: FSMContext):
 
 @dp.message(BotStates.waiting_for_name)
 async def process_name_input(message: Message, state: FSMContext):
-    # Если пользователь ввел имя текстом
-    name = message.text.strip()
-    if len(name) > 50:
-        await message.answer("Имя слишком длинное. Попробуйте короче.")
-        return
-
-    await state.update_data(name=name)
-    await message.answer(
-        get_phrase(phrase_tag="ask_zodiac_sign", language=get_language(message)),
-        reply_markup=get_zodiac_keyboard()
-    )
-    await state.set_state(BotStates.waiting_for_zodiac)
+    try:
+        name = message.text.strip()
+        if len(name) > 50:
+            await message.answer("Имя слишком длинное. Попробуйте короче.")
+            return
+        await state.update_data(name=name)
+        await message.answer(
+            get_phrase(phrase_tag="ask_zodiac_sign", language=get_language(message)),
+            reply_markup=get_zodiac_keyboard()
+        )
+        await state.set_state(BotStates.waiting_for_zodiac)
+    except Exception as e:
+        logger.exception(f"[process_name_input] Unhandled error: {e}")
+        import traceback
+        error_text = f"<b>❗️ Ошибка при вводе имени в основном боте:</b>\n<pre>{traceback.format_exc()}</pre>"
+        chat_id = os.getenv('ERROR_CHAT_ID')
+        if chat_id:
+            await message.bot.send_message(chat_id, error_text)
+        else:
+            logger.error('ERROR_CHAT_ID не найден, ошибка не отправлена в чат')
+        # Fallback на GPT (можно не делать для имени, если не требуется)
+        # raise
 
 
 @dp.callback_query(lambda c: c.data.startswith("zodiac_"))
@@ -320,27 +332,27 @@ async def handle_zodiac_callback(callback: CallbackQuery, state: FSMContext):
 
 @dp.message(BotStates.waiting_for_question)
 async def process_question(message: Message, state: FSMContext):
-    user_nick = get_current_username(message)
-    question = message.text.strip()
-    user = await User.aio_get(
-        telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
-    )
-    await state.clear()
-    loading = await message.answer(
-        get_phrase(phrase_tag="wait_vox_answer", language=get_language(message))
-    )
-    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    if mixpanel:
-        mixpanel.track(
-            distinct_id=str(message.from_user.id),
-            event_name="question",
-            properties={
-                "telegram_user_id": message.from_user.id,
-                "telegram_chat_id": message.chat.id,
-                "user_id": user.user_id,
-            },
-        )
     try:
+        user_nick = get_current_username(message)
+        question = message.text.strip()
+        user = await User.aio_get(
+            telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
+        )
+        await state.clear()
+        loading = await message.answer(
+            get_phrase(phrase_tag="wait_vox_answer", language=get_language(message))
+        )
+        await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        if mixpanel:
+            mixpanel.track(
+                distinct_id=str(message.from_user.id),
+                event_name="question",
+                properties={
+                    "telegram_user_id": message.from_user.id,
+                    "telegram_chat_id": message.chat.id,
+                    "user_id": user.user_id,
+                },
+            )
         prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
         prompt = f"Вопрос: {question}" + answers_prompt + prediction_html_instruction
         report = await process_user_nickname(vox, user_nick, prompt)
@@ -352,36 +364,50 @@ async def process_question(message: Message, state: FSMContext):
                 reply_markup=main_menu
             )
     except Exception as e:
-        logger.exception(e)
-        await loading.edit_text(
-            get_phrase(phrase_tag="processed_error", language=get_language(message)),
-            reply_markup=main_menu
-        )
+        logger.exception(f"[process_question] Unhandled error: {e}")
+        import traceback
+        error_text = f"<b>❗️ Ошибка при вопросе в основном боте:</b>\n<pre>{traceback.format_exc()}</pre>"
+        chat_id = os.getenv('ERROR_CHAT_ID')
+        if chat_id:
+            await message.bot.send_message(chat_id, error_text)
+        else:
+            logger.error('ERROR_CHAT_ID не найден, ошибка не отправлена в чат')
+        # Fallback на GPT
+        try:
+            from utils.openai_gpt import ask_gpt
+            prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
+            prompt = f"Вопрос: {question}" + answers_prompt + prediction_html_instruction
+            loop = asyncio.get_running_loop()
+            gpt_result = await loop.run_in_executor(None, ask_gpt, prompt)
+            await message.answer(gpt_result, parse_mode=ParseMode.HTML, reply_markup=main_menu)
+        except Exception as gpt_e:
+            logger.error(f"Ошибка при генерации ответа через GPT: {gpt_e}")
+        # raise
 
 
 @dp.message(BotStates.waiting_for_yes_no_question)
 async def process_yes_no(message: Message, state: FSMContext):
-    user_nick = get_current_username(message)
-    question = message.text.strip()
-    user = await User.aio_get(
-        telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
-    )
-    await state.clear()
-    loading = await message.answer(
-        get_phrase(phrase_tag="wait_vox_answer", language=get_language(message))
-    )
-    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    if mixpanel:
-        mixpanel.track(
-            distinct_id=str(message.from_user.id),
-            event_name="yes_no_question",
-            properties={
-                "telegram_user_id": message.from_user.id,
-                "telegram_chat_id": message.chat.id,
-                "user_id": user.user_id,
-            },
-        )
     try:
+        user_nick = get_current_username(message)
+        question = message.text.strip()
+        user = await User.aio_get(
+            telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
+        )
+        await state.clear()
+        loading = await message.answer(
+            get_phrase(phrase_tag="wait_vox_answer", language=get_language(message))
+        )
+        await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        if mixpanel:
+            mixpanel.track(
+                distinct_id=str(message.from_user.id),
+                event_name="yes_no_question",
+                properties={
+                    "telegram_user_id": message.from_user.id,
+                    "telegram_chat_id": message.chat.id,
+                    "user_id": user.user_id,
+                },
+            )
         prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
         prompt = f"Вопрос: {question}" + yes_no_prompt + prediction_html_instruction
         report = await process_user_nickname(vox, user_nick, prompt)
@@ -393,49 +419,61 @@ async def process_yes_no(message: Message, state: FSMContext):
                 reply_markup=main_menu
             )
     except Exception as e:
-        logger.exception(e)
-        await loading.edit_text(
-            get_phrase(phrase_tag="processed_error", language=get_language(message)),
-            reply_markup=main_menu
-        )
+        logger.exception(f"[process_yes_no] Unhandled error: {e}")
+        import traceback
+        error_text = f"<b>❗️ Ошибка при вопросе Да/Нет в основном боте:</b>\n<pre>{traceback.format_exc()}</pre>"
+        chat_id = os.getenv('ERROR_CHAT_ID')
+        if chat_id:
+            await message.bot.send_message(chat_id, error_text)
+        else:
+            logger.error('ERROR_CHAT_ID не найден, ошибка не отправлена в чат')
+        # Fallback на GPT
+        try:
+            from utils.openai_gpt import ask_gpt
+            prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
+            prompt = f"Вопрос: {question}" + yes_no_prompt + prediction_html_instruction
+            loop = asyncio.get_running_loop()
+            gpt_result = await loop.run_in_executor(None, ask_gpt, prompt)
+            await message.answer(gpt_result, parse_mode=ParseMode.HTML, reply_markup=main_menu)
+        except Exception as gpt_e:
+            logger.error(f"Ошибка при генерации ответа через GPT: {gpt_e}")
+        # raise
 
 
 @dp.message(BotStates.waiting_for_comp_nick)
 async def process_compatibility(message: Message, state: FSMContext):
-    user_nick = get_current_username(message)
-    target = message.text.strip()
-    user = await User.aio_get(
-        telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
-    )
-    
-    logger.info(f"[DEBUG] process_compatibility: user_nick = {user_nick}")
-    logger.info(f"[DEBUG] process_compatibility: target = {target}")
-    logger.info(f"[DEBUG] process_compatibility: target[1:] = {target[1:]}")
-    
-    if not target.startswith("@"):
-        await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
-        return
-    if target[1:] == user_nick:
-        await message.answer(
-            "Нельзя указать свой же ник. Отправьте аккаунт другого человека вида @nickname."
-        )
-        return
-    await state.clear()
-    loading = await message.answer(
-        get_phrase(phrase_tag="wait_vox_answer", language=get_language(message))
-    )
-    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    if mixpanel:
-        mixpanel.track(
-            distinct_id=str(message.from_user.id),
-            event_name="compatibility",
-            properties={
-                "telegram_user_id": message.from_user.id,
-                "telegram_chat_id": message.chat.id,
-                "user_id": user.user_id,
-            },
-        )
     try:
+        user_nick = get_current_username(message)
+        target = message.text.strip()
+        user = await User.aio_get(
+            telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
+        )
+        logger.info(f"[DEBUG] process_compatibility: user_nick = {user_nick}")
+        logger.info(f"[DEBUG] process_compatibility: target = {target}")
+        logger.info(f"[DEBUG] process_compatibility: target[1:] = {target[1:]}")
+        if not target.startswith("@"):
+            await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
+            return
+        if target[1:] == user_nick:
+            await message.answer(
+                "Нельзя указать свой же ник. Отправьте аккаунт другого человека вида @nickname."
+            )
+            return
+        await state.clear()
+        loading = await message.answer(
+            get_phrase(phrase_tag="wait_vox_answer", language=get_language(message))
+        )
+        await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        if mixpanel:
+            mixpanel.track(
+                distinct_id=str(message.from_user.id),
+                event_name="compatibility",
+                properties={
+                    "telegram_user_id": message.from_user.id,
+                    "telegram_chat_id": message.chat.id,
+                    "user_id": user.user_id,
+                },
+            )
         logger.info(f"[DEBUG] process_compatibility: вызываем process_user_nicknames с {user_nick} и {target[1:]}")
         prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
         report = await process_user_nicknames(
@@ -450,49 +488,61 @@ async def process_compatibility(message: Message, state: FSMContext):
                 reply_markup=main_menu
             )
     except Exception as e:
-        logger.exception(f"[DEBUG] process_compatibility: ошибка при вызове process_user_nicknames: {e}")
-        await loading.edit_text(
-            get_phrase(phrase_tag="processed_error", language=get_language(message)),
-            reply_markup=main_menu
-        )
+        logger.exception(f"[process_compatibility] Unhandled error: {e}")
+        import traceback
+        error_text = f"<b>❗️ Ошибка при совместимости в основном боте:</b>\n<pre>{traceback.format_exc()}</pre>"
+        chat_id = os.getenv('ERROR_CHAT_ID')
+        if chat_id:
+            await message.bot.send_message(chat_id, error_text)
+        else:
+            logger.error('ERROR_CHAT_ID не найден, ошибка не отправлена в чат')
+        # Fallback на GPT
+        try:
+            from utils.openai_gpt import ask_gpt
+            prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
+            prompt = compatibility_prompt + prediction_html_instruction
+            loop = asyncio.get_running_loop()
+            gpt_result = await loop.run_in_executor(None, ask_gpt, prompt)
+            await message.answer(gpt_result, parse_mode=ParseMode.HTML, reply_markup=main_menu)
+        except Exception as gpt_e:
+            logger.error(f"Ошибка при генерации ответа через GPT: {gpt_e}")
+        # raise
 
 
 @dp.message(BotStates.waiting_for_qualities_nick)
 async def process_qualities(message: Message, state: FSMContext):
-    user_nick = get_current_username(message)
-    target = message.text.strip()
-    user = await User.aio_get(
-        telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
-    )
-    
-    logger.info(f"[DEBUG] process_qualities: user_nick = {user_nick}")
-    logger.info(f"[DEBUG] process_qualities: target = {target}")
-    logger.info(f"[DEBUG] process_qualities: target[1:] = {target[1:]}")
-    
-    if not target.startswith("@"):
-        await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
-        return
-    if target[1:] == user_nick:
-        await message.answer(
-            "Нельзя указать свой же ник. Отправьте аккаунт другого человека вида @nickname."
-        )
-        return
-    await state.clear()
-    loading = await message.answer(
-        get_phrase(phrase_tag="wait_vox_answer", language=get_language(message))
-    )
-    await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    if mixpanel:
-        mixpanel.track(
-            distinct_id=str(message.from_user.id),
-            event_name="qualities",
-            properties={
-                "telegram_user_id": message.from_user.id,
-                "telegram_chat_id": message.chat.id,
-                "user_id": user.user_id,
-            },
-        )
     try:
+        user_nick = get_current_username(message)
+        target = message.text.strip()
+        user = await User.aio_get(
+            telegram_user_id=message.from_user.id, telegram_chat_id=message.chat.id
+        )
+        logger.info(f"[DEBUG] process_qualities: user_nick = {user_nick}")
+        logger.info(f"[DEBUG] process_qualities: target = {target}")
+        logger.info(f"[DEBUG] process_qualities: target[1:] = {target[1:]}")
+        if not target.startswith("@"):
+            await message.answer("Неверный формат. Отправьте аккаунт вида @nickname.")
+            return
+        if target[1:] == user_nick:
+            await message.answer(
+                "Нельзя указать свой же ник. Отправьте аккаунт другого человека вида @nickname."
+            )
+            return
+        await state.clear()
+        loading = await message.answer(
+            get_phrase(phrase_tag="wait_vox_answer", language=get_language(message))
+        )
+        await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        if mixpanel:
+            mixpanel.track(
+                distinct_id=str(message.from_user.id),
+                event_name="qualities",
+                properties={
+                    "telegram_user_id": message.from_user.id,
+                    "telegram_chat_id": message.chat.id,
+                    "user_id": user.user_id,
+                },
+            )
         logger.info(f"[DEBUG] process_qualities: вызываем process_user_nickname для получения качеств {target[1:]}")
         target_qualities = await process_user_nickname(
             vox, target[1:], qualities_prompt["people_qualities"]
@@ -520,20 +570,26 @@ async def process_qualities(message: Message, state: FSMContext):
                 "Не удалось получить предсказание. Попробуйте позже.",
                 reply_markup=main_menu
             )
-        # report = await process_user_nicknames(
-        #     vox, user_nick, target[1:], qualities_prompt
-        # )
-        # if report:
-        #     await loading.edit_text(report, parse_mode=ParseMode.MARKDOWN)
-        # else:
-        #     await loading.edit_text(
-        #         "Не удалось получить предсказание. Попробуйте позже."
-        #     )
     except Exception as e:
-        logger.exception(f"[DEBUG] process_qualities: ошибка при обработке: {e}")
-        await loading.edit_text(
-            get_phrase(phrase_tag="processed_error", language=get_language(message)), reply_markup=main_menu
-        )
+        logger.exception(f"[process_qualities] Unhandled error: {e}")
+        import traceback
+        error_text = f"<b>❗️ Ошибка при анализе качеств в основном боте:</b>\n<pre>{traceback.format_exc()}</pre>"
+        chat_id = os.getenv('ERROR_CHAT_ID')
+        if chat_id:
+            await message.bot.send_message(chat_id, error_text)
+        else:
+            logger.error('ERROR_CHAT_ID не найден, ошибка не отправлена в чат')
+        # Fallback на GPT
+        try:
+            from utils.openai_gpt import ask_gpt
+            prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
+            prompt = qualities_prompt["tips"] + prediction_html_instruction
+            loop = asyncio.get_running_loop()
+            gpt_result = await loop.run_in_executor(None, ask_gpt, prompt)
+            await message.answer(gpt_result, parse_mode=ParseMode.HTML, reply_markup=main_menu)
+        except Exception as gpt_e:
+            logger.error(f"Ошибка при генерации ответа через GPT: {gpt_e}")
+        # raise
 
 
 @dp.message()
@@ -543,23 +599,27 @@ async def fallback(message: Message):
 
 
 async def on_error(update, exception):
-    # Логируем все ошибки
     logger.error(f"[on_error] {exception}")
-    # Фильтрация ошибок, которые не нужно отправлять в группу
-    if isinstance(exception, aiogram.exceptions.TelegramBadRequest):
-        if "query is too old" in str(exception) or "response timeout expired" in str(exception) or "query ID is invalid" in str(exception):
-            return True  # Не отправлять в группу
-    if isinstance(exception, NotFoundError):
-        return True
-    if isinstance(exception, ApiError):
-        return True
-    # Для остальных ошибок отправлять в группу
     import traceback
-    error_text = f"<b>❗️ В боте произошла ошибка:</b>\n<pre>{traceback.format_exc()}</pre>"
-    try:
-        await bot.send_message(config.ERROR_CHAT_ID, error_text)
-    except Exception as e:
-        logger.error(f"Не удалось отправить ошибку в группу: {e}")
+    # Определяем контекст для инлайн-режима
+    context = ""
+    details = ""
+    if hasattr(update, 'inline_query') and update.inline_query:
+        context = "Ошибка в инлайн-режиме (inline_query)"
+        details = f"\n<b>Текст запроса:</b> {getattr(update.inline_query, 'query', '')}"
+    elif hasattr(update, 'callback_query') and update.callback_query:
+        context = "Ошибка в инлайн-режиме (callback_query)"
+        data = getattr(update.callback_query, 'data', '')
+        user_id = getattr(getattr(update.callback_query, 'from_user', None), 'id', '')
+        details = f"\n<b>Callback data:</b> {data}\n<b>User ID:</b> {user_id}"
+    else:
+        context = "Ошибка вне message-хендлеров (например, polling/callback)"
+    error_text = f"<b>❗️ {context}:</b>{details}\n<pre>{traceback.format_exc()}</pre>"
+    chat_id = os.getenv('ERROR_CHAT_ID')
+    if chat_id:
+        await message.bot.send_message(chat_id, error_text)
+    else:
+        logger.error('ERROR_CHAT_ID не найден, ошибка не отправлена в чат')
     return True
 
 

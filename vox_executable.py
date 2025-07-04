@@ -70,7 +70,7 @@ async def process_user_nickname(vox: AsyncVoxAPI, nickname, prompt):
     except Exception as e:
         logger.error(f"Error in process_user_nickname for {nickname}: {e}")
         logger.exception(f"Full traceback for process_user_nickname error:")
-        return ask_gpt(prompt)
+        raise
     return None
 
 
@@ -132,6 +132,7 @@ async def process_user_nicknames(vox: AsyncVoxAPI, from_user, about_user, prompt
     except Exception as e:
         logger.error(f"Error occurred in process_user_nicknames: {e}")
         logger.exception(f"Full traceback for process_user_nicknames error:")
+        raise
     return None
 
 
