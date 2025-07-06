@@ -13,8 +13,10 @@ from loguru import logger
 import re
 import json
 import html
+import os
 
 from vox.asyncapi import AsyncVoxAPI
+from vox.exceptions import NotFoundError
 from vox_executable import process_user_nickname, process_user_nicknames
 from prompts import (
     prediction_prompt,
@@ -24,6 +26,12 @@ from prompts import (
     compatibility_prompt,
     compatibility_of_2_prompt,
     daily_prediction_prompt,
+    daily_prediction_prompt_gpt,
+    answers_prompt_gpt,
+    yes_no_prompt_gpt,
+    compatibility_prompt_gpt,
+    qualities_prompt_gpt,
+    compatibility_of_2_prompt_gpt,
 )
 from utils.nickname_codec import encode_nickname, decode_nickname
 from mixpanel import Mixpanel
@@ -277,27 +285,67 @@ async def handle_get_prediction(callback: CallbackQuery, vox: AsyncVoxAPI):
         elif callback.message and hasattr(callback.message, "edit_text"):
             await callback.message.edit_text(f"<b>🔮 Получаем предсказание для @{nickname}...</b>\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         daily_prompt = daily_prediction_prompt
-        prediction = await process_user_nickname(vox, nickname, daily_prompt)
-        if prediction:
-            formatted = f"<b>🔮 Предсказание на день для @{nickname}</b>\n\n{prediction}"
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    formatted,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.HTML,
-                )
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
-        else:
-            error_text = "❌ Не удалось получить предсказание. Попробуйте позже."
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    error_text,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.HTML,
-                )
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        try:
+            prediction = await process_user_nickname(vox, nickname, daily_prompt)
+            if prediction:
+                formatted = f"<b>🔮 Предсказание на день для @{nickname}</b>\n\n{prediction}"
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        formatted,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось получить предсказание. Попробуйте позже."
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        error_text,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        except NotFoundError as e:
+            logger.warning(f"Пользователь {nickname} не найден в VOX API: {e}")
+            logger.info(f"Переключаемся на GPT для пользователя {nickname}")
+            # Отправляем ошибку в чат ошибок
+            import traceback
+            error_text = f"<b>❗️ Ошибка в инлайн-режиме (предсказание):</b>\n<b>Пользователь не найден:</b> {nickname}\n<b>Ошибка:</b> {e}\n<b>User ID:</b> {callback.from_user.id if callback.from_user else 'unknown'}"
+            chat_id = os.getenv('ERROR_CHAT_ID')
+            if chat_id and bot:
+                try:
+                    await bot.send_message(chat_id, error_text)
+                except Exception as send_error:
+                    logger.error(f"Не удалось отправить ошибку в чат: {send_error}")
+            else:
+                logger.error('ERROR_CHAT_ID не найден или bot недоступен, ошибка не отправлена в чат')
+            # Fallback на GPT
+            from utils.openai_gpt import ask_gpt
+            import asyncio
+            loop = asyncio.get_running_loop()
+            prediction = await loop.run_in_executor(None, ask_gpt, daily_prediction_prompt_gpt)
+            if prediction:
+                formatted = f"<b>🔮 Предсказание на день для @{nickname}</b>\n\n{prediction}"
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        formatted,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось получить предсказание. Попробуйте позже."
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        error_text,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(
             f"[CALLBACK] Ошибка при получении предсказания для @{nickname}: {e}"
@@ -345,27 +393,68 @@ async def handle_get_question(callback: CallbackQuery, vox: AsyncVoxAPI):
         elif callback.message and hasattr(callback.message, "edit_text"):
             await callback.message.edit_text(f"<b>🔮 Получаем ответ на вопрос...</b>\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
         question_prompt = f"Вопрос: {question}" + answers_prompt
-        answer = await process_user_nickname(vox, user_nick, question_prompt)
-        if answer:
-            formatted = f"<b>🔮 Вопрос:</b> {question}\n\n<b>Ответ:</b>\n{answer}"
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    formatted,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.HTML,
-                )
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
-        else:
-            error_text = "❌ Не удалось получить ответ. Попробуйте позже."
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    error_text,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.HTML,
-                )
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        try:
+            answer = await process_user_nickname(vox, user_nick, question_prompt)
+            if answer:
+                formatted = f"<b>🔮 Вопрос:</b> {question}\n\n<b>Ответ:</b>\n{answer}"
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        formatted,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось получить ответ. Попробуйте позже."
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        error_text,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        except NotFoundError as e:
+            logger.warning(f"Пользователь {user_nick} не найден в VOX API: {e}")
+            logger.info(f"Переключаемся на GPT для пользователя {user_nick}")
+            # Отправляем ошибку в чат ошибок
+            import traceback
+            error_text = f"<b>❗️ Ошибка в инлайн-режиме (вопрос):</b>\n<b>Пользователь не найден:</b> {user_nick}\n<b>Вопрос:</b> {question}\n<b>Ошибка:</b> {e}\n<b>User ID:</b> {callback.from_user.id if callback.from_user else 'unknown'}"
+            chat_id = os.getenv('ERROR_CHAT_ID')
+            if chat_id and bot:
+                try:
+                    await bot.send_message(chat_id, error_text)
+                except Exception as send_error:
+                    logger.error(f"Не удалось отправить ошибку в чат: {send_error}")
+            else:
+                logger.error('ERROR_CHAT_ID не найден или bot недоступен, ошибка не отправлена в чат')
+            # Fallback на GPT
+            from utils.openai_gpt import ask_gpt
+            import asyncio
+            loop = asyncio.get_running_loop()
+            question_prompt_gpt = f"Вопрос: {question}" + answers_prompt_gpt
+            answer = await loop.run_in_executor(None, ask_gpt, question_prompt_gpt)
+            if answer:
+                formatted = f"<b>🔮 Вопрос:</b> {question}\n\n<b>Ответ:</b>\n{answer}"
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        formatted,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось получить ответ. Попробуйте позже."
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        error_text,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(f"[CALLBACK] Ошибка при получении ответа на вопрос: {e}")
         error_text = "❌ Произошла ошибка при получении ответа."
@@ -405,29 +494,69 @@ async def handle_get_qualities(callback: CallbackQuery, vox: AsyncVoxAPI):
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
             await callback.message.edit_text(f"<b>🔮 Анализируем качества @{nickname}...</b>\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
-        result = await process_user_nickname(
-            vox, nickname, qualities_prompt["people_qualities"]
-        )
-        if result:
-            formatted = f"<b>🔮 Анализ качеств @{nickname}</b>\n\n{result}"
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    formatted,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.HTML,
-                )
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
-        else:
-            error_text = "❌ Не удалось проанализировать качества. Попробуйте позже."
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    error_text,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.HTML,
-                )
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        try:
+            result = await process_user_nickname(
+                vox, nickname, qualities_prompt["people_qualities"]
+            )
+            if result:
+                formatted = f"<b>🔮 Анализ качеств @{nickname}</b>\n\n{result}"
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        formatted,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось проанализировать качества. Попробуйте позже."
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        error_text,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        except NotFoundError as e:
+            logger.warning(f"Пользователь {nickname} не найден в VOX API: {e}")
+            logger.info(f"Переключаемся на GPT для пользователя {nickname}")
+            # Отправляем ошибку в чат ошибок
+            import traceback
+            error_text = f"<b>❗️ Ошибка в инлайн-режиме (качества):</b>\n<b>Пользователь не найден:</b> {nickname}\n<b>Ошибка:</b> {e}\n<b>User ID:</b> {callback.from_user.id if callback.from_user else 'unknown'}"
+            chat_id = os.getenv('ERROR_CHAT_ID')
+            if chat_id and bot:
+                try:
+                    await bot.send_message(chat_id, error_text)
+                except Exception as send_error:
+                    logger.error(f"Не удалось отправить ошибку в чат: {send_error}")
+            else:
+                logger.error('ERROR_CHAT_ID не найден или bot недоступен, ошибка не отправлена в чат')
+            # Fallback на GPT
+            from utils.openai_gpt import ask_gpt
+            import asyncio
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(None, ask_gpt, qualities_prompt_gpt["people_qualities"])
+            if result:
+                formatted = f"<b>🔮 Анализ качеств @{nickname}</b>\n\n{result}"
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        formatted,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось проанализировать качества. Попробуйте позже."
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        error_text,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(f"[CALLBACK] Ошибка при получении анализа качеств для @{nickname}: {e}")
         error_text = "❌ Произошла ошибка при анализе качеств."
@@ -476,27 +605,71 @@ async def handle_get_yesno(callback: CallbackQuery, vox: AsyncVoxAPI):
             f"Вопрос: {question}\n\nДай ответ Да или Нет с подробным объяснением."
             + yes_no_prompt
         )
-        answer = await process_user_nickname(vox, user_nick, yesno_prompt_full)
-        if answer:
-            formatted = f"<b>🔮 Вопрос:</b> {question}\n\n<b>Ответ Да/Нет:</b>\n{answer}"
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    formatted,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.HTML,
-                )
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
-        else:
-            error_text = "❌ Не удалось получить ответ. Попробуйте позже."
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    error_text,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.HTML,
-                )
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        try:
+            answer = await process_user_nickname(vox, user_nick, yesno_prompt_full)
+            if answer:
+                formatted = f"<b>🔮 Вопрос:</b> {question}\n\n<b>Ответ Да/Нет:</b>\n{answer}"
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        formatted,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось получить ответ. Попробуйте позже."
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        error_text,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        except NotFoundError as e:
+            logger.warning(f"Пользователь {user_nick} не найден в VOX API: {e}")
+            logger.info(f"Переключаемся на GPT для пользователя {user_nick}")
+            # Отправляем ошибку в чат ошибок
+            import traceback
+            error_text = f"<b>❗️ Ошибка в инлайн-режиме (да/нет):</b>\n<b>Пользователь не найден:</b> {user_nick}\n<b>Вопрос:</b> {question}\n<b>Ошибка:</b> {e}\n<b>User ID:</b> {callback.from_user.id if callback.from_user else 'unknown'}"
+            chat_id = os.getenv('ERROR_CHAT_ID')
+            if chat_id and bot:
+                try:
+                    await bot.send_message(chat_id, error_text)
+                except Exception as send_error:
+                    logger.error(f"Не удалось отправить ошибку в чат: {send_error}")
+            else:
+                logger.error('ERROR_CHAT_ID не найден или bot недоступен, ошибка не отправлена в чат')
+            # Fallback на GPT
+            from utils.openai_gpt import ask_gpt
+            import asyncio
+            loop = asyncio.get_running_loop()
+            yesno_prompt_gpt_full = (
+                f"Вопрос: {question}\n\nДай ответ Да или Нет с подробным объяснением."
+                + yes_no_prompt_gpt
+            )
+            answer = await loop.run_in_executor(None, ask_gpt, yesno_prompt_gpt_full)
+            if answer:
+                formatted = f"<b>🔮 Вопрос:</b> {question}\n\n<b>Ответ Да/Нет:</b>\n{answer}"
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        formatted,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось получить ответ. Попробуйте позже."
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(
+                        error_text,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(f"[CALLBACK] Ошибка при получении ответа да/нет: {e}")
         error_text = "❌ Произошла ошибка при получении ответа Да/Нет."
@@ -538,19 +711,51 @@ async def handle_get_compatibility(callback: CallbackQuery, vox: AsyncVoxAPI):
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
             await callback.message.edit_text(f"<b>❤️ Анализируем совместимость @{user_nick} и @{target_nick}...</b>\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
-        report = await process_user_nicknames(vox, user_nick, target_nick, compatibility_prompt)
-        if report:
-            formatted = f"<b>❤️ Совместимость @{user_nick} и @{target_nick}</b>\n\n{report}"
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(formatted, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.HTML)
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
-        else:
-            error_text = "❌ Не удалось получить совместимость. Попробуйте позже."
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(error_text, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.HTML)
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        try:
+            report = await process_user_nicknames(vox, user_nick, target_nick, compatibility_prompt)
+            if report:
+                formatted = f"<b>❤️ Совместимость @{user_nick} и @{target_nick}</b>\n\n{report}"
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(formatted, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.HTML)
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось получить совместимость. Попробуйте позже."
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(error_text, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.HTML)
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        except NotFoundError as e:
+            logger.warning(f"Один из пользователей ({user_nick} или {target_nick}) не найден в VOX API: {e}")
+            logger.info(f"Переключаемся на GPT для анализа совместимости")
+            # Отправляем ошибку в чат ошибок
+            import traceback
+            error_text = f"<b>❗️ Ошибка в инлайн-режиме (совместимость):</b>\n<b>Пользователи:</b> {user_nick} и {target_nick}\n<b>Ошибка:</b> {e}\n<b>User ID:</b> {callback.from_user.id if callback.from_user else 'unknown'}"
+            chat_id = os.getenv('ERROR_CHAT_ID')
+            if chat_id and bot:
+                try:
+                    await bot.send_message(chat_id, error_text)
+                except Exception as send_error:
+                    logger.error(f"Не удалось отправить ошибку в чат: {send_error}")
+            else:
+                logger.error('ERROR_CHAT_ID не найден или bot недоступен, ошибка не отправлена в чат')
+            # Fallback на GPT
+            from utils.openai_gpt import ask_gpt
+            import asyncio
+            loop = asyncio.get_running_loop()
+            report = await loop.run_in_executor(None, ask_gpt, compatibility_prompt_gpt)
+            if report:
+                formatted = f"<b>❤️ Совместимость @{user_nick} и @{target_nick}</b>\n\n{report}"
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(formatted, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.HTML)
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось получить совместимость. Попробуйте позже."
+                if callback.inline_message_id and bot is not None:
+                    await bot.edit_message_text(error_text, inline_message_id=callback.inline_message_id, parse_mode=ParseMode.HTML)
+                elif callback.message and hasattr(callback.message, "edit_text"):
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(f"[CALLBACK] Ошибка при получении совместимости @{user_nick} и @{target_nick}: {e}")
         error_text = "❌ Произошла ошибка при анализе совместимости."
@@ -608,38 +813,89 @@ async def handle_get_compatibility_two(callback: CallbackQuery, vox: AsyncVoxAPI
             )
         elif callback.message and hasattr(callback.message, "edit_text"):
             await callback.message.edit_text(f"<b>❤️ Анализируем совместимость @{nick1} и @{nick2}...</b>\n\n⏳ Пожалуйста, подождите...", parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
-        report = await process_user_nicknames(vox, nick1, nick2, manual_prompt)
-        if report:
-            formatted = f"<b>❤️ Совместимость @{nick1} и @{nick2}</b>\n\n{report}"
-            try:
+        try:
+            report = await process_user_nicknames(vox, nick1, nick2, manual_prompt)
+            if report:
+                formatted = f"<b>❤️ Совместимость @{nick1} и @{nick2}</b>\n\n{report}"
+                try:
+                    if callback.inline_message_id and bot is not None:
+                        await bot.edit_message_text(
+                            formatted,
+                            inline_message_id=callback.inline_message_id,
+                            parse_mode=ParseMode.HTML,
+                        )
+                    elif callback.message and hasattr(callback.message, "edit_text"):
+                        await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+                except Exception as e:
+                    logger.exception(f"[CALLBACK] Ошибка парсинга HTML, пробуем без parse_mode: {e}")
+                    # Пробуем отправить без parse_mode
+                    if callback.inline_message_id and bot is not None:
+                        await bot.edit_message_text(
+                            formatted,
+                            inline_message_id=callback.inline_message_id
+                        )
+                    elif callback.message and hasattr(callback.message, "edit_text"):
+                        await callback.message.edit_text(formatted)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось получить совместимость. Попробуйте позже."
                 if callback.inline_message_id and bot is not None:
                     await bot.edit_message_text(
-                        formatted,
+                        error_text,
                         inline_message_id=callback.inline_message_id,
                         parse_mode=ParseMode.HTML,
                     )
                 elif callback.message and hasattr(callback.message, "edit_text"):
-                    await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
-            except Exception as e:
-                logger.exception(f"[CALLBACK] Ошибка парсинга HTML, пробуем без parse_mode: {e}")
-                # Пробуем отправить без parse_mode
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+        except NotFoundError as e:
+            logger.warning(f"Один из пользователей ({nick1} или {nick2}) не найден в VOX API: {e}")
+            logger.info(f"Переключаемся на GPT для анализа совместимости двух людей")
+            # Отправляем ошибку в чат ошибок
+            import traceback
+            error_text = f"<b>❗️ Ошибка в инлайн-режиме (совместимость двух):</b>\n<b>Пользователи:</b> {nick1} и {nick2}\n<b>Ошибка:</b> {e}\n<b>User ID:</b> {callback.from_user.id if callback.from_user else 'unknown'}"
+            chat_id = os.getenv('ERROR_CHAT_ID')
+            if chat_id and bot:
+                try:
+                    await bot.send_message(chat_id, error_text)
+                except Exception as send_error:
+                    logger.error(f"Не удалось отправить ошибку в чат: {send_error}")
+            else:
+                logger.error('ERROR_CHAT_ID не найден или bot недоступен, ошибка не отправлена в чат')
+            # Fallback на GPT
+            from utils.openai_gpt import ask_gpt
+            import asyncio
+            loop = asyncio.get_running_loop()
+            report = await loop.run_in_executor(None, ask_gpt, compatibility_of_2_prompt_gpt)
+            if report:
+                formatted = f"<b>❤️ Совместимость @{nick1} и @{nick2}</b>\n\n{report}"
+                try:
+                    if callback.inline_message_id and bot is not None:
+                        await bot.edit_message_text(
+                            formatted,
+                            inline_message_id=callback.inline_message_id,
+                            parse_mode=ParseMode.HTML,
+                        )
+                    elif callback.message and hasattr(callback.message, "edit_text"):
+                        await callback.message.edit_text(formatted, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+                except Exception as e:
+                    logger.exception(f"[CALLBACK] Ошибка парсинга HTML, пробуем без parse_mode: {e}")
+                    # Пробуем отправить без parse_mode
+                    if callback.inline_message_id and bot is not None:
+                        await bot.edit_message_text(
+                            formatted,
+                            inline_message_id=callback.inline_message_id
+                        )
+                    elif callback.message and hasattr(callback.message, "edit_text"):
+                        await callback.message.edit_text(formatted)  # type: ignore[attr-defined]
+            else:
+                error_text = "❌ Не удалось получить совместимость. Попробуйте позже."
                 if callback.inline_message_id and bot is not None:
                     await bot.edit_message_text(
-                        formatted,
-                        inline_message_id=callback.inline_message_id
+                        error_text,
+                        inline_message_id=callback.inline_message_id,
+                        parse_mode=ParseMode.HTML,
                     )
                 elif callback.message and hasattr(callback.message, "edit_text"):
-                    await callback.message.edit_text(formatted)  # type: ignore[attr-defined]
-        else:
-            error_text = "❌ Не удалось получить совместимость. Попробуйте позже."
-            if callback.inline_message_id and bot is not None:
-                await bot.edit_message_text(
-                    error_text,
-                    inline_message_id=callback.inline_message_id,
-                    parse_mode=ParseMode.HTML,
-                )
-            elif callback.message and hasattr(callback.message, "edit_text"):
-                await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
+                    await callback.message.edit_text(error_text, parse_mode=ParseMode.HTML)  # type: ignore[attr-defined]
     except Exception as e:
         logger.exception(f"[CALLBACK] Ошибка при получении совместимости двух людей @{nick1} и @{nick2}: {e}")
         error_text = "❌ Произошла ошибка при анализе совместимости."

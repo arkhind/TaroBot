@@ -38,7 +38,21 @@ from apscheduler.triggers.cron import CronTrigger
 import pytz
 
 # Загружаем промпты
-from prompts import *
+from prompts import (
+    answers_prompt,
+    yes_no_prompt,
+    compatibility_prompt,
+    qualities_prompt,
+    prediction_prompt,
+    daily_prediction_prompt,
+    compatibility_of_2_prompt,
+    answers_prompt_gpt,
+    yes_no_prompt_gpt,
+    compatibility_prompt_gpt,
+    qualities_prompt_gpt,
+    daily_prediction_prompt_gpt,
+    compatibility_of_2_prompt_gpt,
+)
 
 
 # FSM состояния
@@ -376,7 +390,7 @@ async def process_question(message: Message, state: FSMContext):
         try:
             from utils.openai_gpt import ask_gpt
             prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
-            prompt = f"Вопрос: {question}" + answers_prompt + prediction_html_instruction
+            prompt = f"Вопрос: {question}" + answers_prompt_gpt + prediction_html_instruction
             loop = asyncio.get_running_loop()
             gpt_result = await loop.run_in_executor(None, ask_gpt, prompt)
             await message.answer(gpt_result, parse_mode=ParseMode.HTML, reply_markup=main_menu)
@@ -431,7 +445,7 @@ async def process_yes_no(message: Message, state: FSMContext):
         try:
             from utils.openai_gpt import ask_gpt
             prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
-            prompt = f"Вопрос: {question}" + yes_no_prompt + prediction_html_instruction
+            prompt = f"Вопрос: {question}" + yes_no_prompt_gpt + prediction_html_instruction
             loop = asyncio.get_running_loop()
             gpt_result = await loop.run_in_executor(None, ask_gpt, prompt)
             await message.answer(gpt_result, parse_mode=ParseMode.HTML, reply_markup=main_menu)
@@ -500,7 +514,7 @@ async def process_compatibility(message: Message, state: FSMContext):
         try:
             from utils.openai_gpt import ask_gpt
             prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
-            prompt = compatibility_prompt + prediction_html_instruction
+            prompt = compatibility_prompt_gpt + prediction_html_instruction
             loop = asyncio.get_running_loop()
             gpt_result = await loop.run_in_executor(None, ask_gpt, prompt)
             await message.answer(gpt_result, parse_mode=ParseMode.HTML, reply_markup=main_menu)
@@ -583,7 +597,7 @@ async def process_qualities(message: Message, state: FSMContext):
         try:
             from utils.openai_gpt import ask_gpt
             prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
-            prompt = qualities_prompt["tips"] + prediction_html_instruction
+            prompt = qualities_prompt_gpt["tips"] + prediction_html_instruction
             loop = asyncio.get_running_loop()
             gpt_result = await loop.run_in_executor(None, ask_gpt, prompt)
             await message.answer(gpt_result, parse_mode=ParseMode.HTML, reply_markup=main_menu)
