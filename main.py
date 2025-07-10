@@ -138,8 +138,6 @@ async def start_handler(message: Message, state: FSMContext):
                 reply_markup=get_name_keyboard(nickname, full_name),
             )
             await state.set_state(BotStates.waiting_for_name)
-
-
 @dp.message(Command("menu"))
 @only_registered
 async def menu_handler(message: Message, db_user: User):
@@ -235,6 +233,17 @@ async def handle_callback_query(
                 )
         except Exception as e:
             logger.exception(e)
+            import traceback
+            error_text = (
+                f"<b>❗️ Ошибка при предсказании (prediction callback):</b>\n"
+                f"<b>Nickname:</b> {get_current_username(callback)}\n"
+                f"<pre>{traceback.format_exc()}</pre>"
+            )
+            chat_id = os.getenv('ERROR_CHAT_ID')
+            if chat_id:
+                await callback.message.bot.send_message(chat_id, error_text)
+            else:
+                logger.error('ERROR_CHAT_ID не найден, ошибка не отправлена в чат')
             await loading.edit_text(
                 get_phrase(
                     phrase_tag="processed_error", language=get_language(callback)

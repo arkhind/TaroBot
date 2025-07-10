@@ -20,6 +20,8 @@ def _process_report_lines(report_str: str) -> str:
 
 async def process_user_nickname(vox: AsyncVoxAPI, nickname, prompt):
     try:
+        if not nickname:
+            raise ValueError("Nickname is None or empty in process_user_nickname. Cannot proceed.")
         logger.info(f"[DEBUG] process_user_nickname: начинаем обработку {nickname}")
         logger.info(f"[DEBUG] process_user_nickname: вызываем get_user_id с nickname={nickname}")
         user_id_response = await vox.get_user_id(nickname)
