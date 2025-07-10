@@ -9,7 +9,7 @@ from .exceptions import (
     ServerError,
     ApiError,
 )
-from .models import *
+from .models import Subject, AIAnalytics, EmptyResponse, CosineSimilarityResponse, FastReport, UserStructuredReport, CloseUsers, UserActivity, ActivitiesHourly, ActivitiesWeekly, ActivitiesTotal, UserLanguageResponse, GenderResponse, CompactResponse, UserNameAlias, UserID, UserRegistrationDate, UserProfile, Group, GroupReport
 
 
 class AsyncVoxAPI:
@@ -62,7 +62,7 @@ class AsyncVoxAPI:
         if model:
             params["model"] = model
         if no_cache:
-            params["no_cache"] = True
+            params["no_cache"] = "true"
         return await self._request(
             "GET", f"/ai_analytics/{subject.name}/{subject_id}", params=params
         )
@@ -100,9 +100,9 @@ class AsyncVoxAPI:
     ):
         params = {"query": query}
         if limit:
-            params["limit"] = limit
+            params["limit"] = str(limit)
         if offset:
-            params["offset"] = offset
+            params["offset"] = str(offset)
         return await self._request("GET", "/search/ai/users", params=params)
 
     async def search_raw(
@@ -114,9 +114,9 @@ class AsyncVoxAPI:
     ):
         params = {"query": query}
         if limit:
-            params["limit"] = limit
+            params["limit"] = str(limit)
         if offset:
-            params["offset"] = offset
+            params["offset"] = str(offset)
         return await self._request(
             "GET", f"/search/ai/raw/{subject.name}", params=params
         )
@@ -126,7 +126,7 @@ class AsyncVoxAPI:
     ):
         params = {"query": query, "start_date": start_date, "end_date": end_date}
         if limit:
-            params["limit"] = limit
+            params["limit"] = str(limit)
         return await self._request("GET", "/search/ai/users/activity", params=params)
 
     async def get_activity_hourly(self, user_id: int):
@@ -151,6 +151,9 @@ class AsyncVoxAPI:
         return await self._request("GET", f"/users/{user_id}/names")
 
     async def get_user_id(self, username: str):
+        # Ensure username is str before quoting (fix for TypeError)
+        if isinstance(username, bytes):
+            username = username.decode()
         # URL-кодируем username для корректной обработки специальных символов
         encoded_username = quote(username, safe='')
         return await self._request("GET", f"/users/username/{encoded_username}")
@@ -168,8 +171,8 @@ class AsyncVoxAPI:
         self, group_id: int, messages_limit: int, messages_min: int, members_min: int
     ):
         params = {
-            "messages_limit": messages_limit,
-            "messages_min": messages_min,
-            "members_min": members_min,
+            "messages_limit": str(messages_limit),
+            "messages_min": str(messages_min),
+            "members_min": str(members_min),
         }
         return await self._request("GET", f"/groups/{group_id}/messages", params=params)
