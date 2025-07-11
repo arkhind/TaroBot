@@ -212,7 +212,7 @@ async def handle_callback_query(
         )
         if mixpanel:
             mixpanel.track(
-                distinct_id=str(callback.message.from_user.id),
+                distinct_id=str(callback.from_user.id),
                 event_name="prediction",
                 properties={
                     "telegram_user_id": callback.from_user.id,
