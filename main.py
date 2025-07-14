@@ -499,8 +499,23 @@ async def process_compatibility(message: Message, state: FSMContext):
             )
         logger.info(f"[DEBUG] process_compatibility: вызываем process_user_nicknames с {user_nick} и {target[1:]}")
         prediction_html_instruction = '\n\nОформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй Markdown.'
+        manual_prompt = (
+        "Проанализируй совместимость этих людей между собой (тебе пишет @" + user_nick ").\n"
+        "Опиши главные черты каждого из них.\n"
+        "Дай конкретный ответ в процентах насколько люди совместимы.\n"
+        "Текста должно быть немного, все должно быть лаконично.\n"
+        "Главное чтобы было количество процентов совместимости.\n"
+        "Дай ответ на русском языке.\n"
+        "Используй стиль гадания на картах таро, упомяни карты совместимости.\n"
+        "Ответ должен быть полезным и вдохновляющим.\n"
+        "Используй эмодзи в меру для создания атмосферы.\n"
+        "Не используй bullet list.\n"
+        "Не используй теги <ul>, <ol>, <li>.\n"
+        "Не ссылайся на активность человека в конкретных каналах и чатах.\n"
+        "Оформи ответ с помощью HTML-тегов <b>жирный</b>, <i>курсив</i>, <u>подчёркнутый</u>. Не используй <html> и <body> теги."
+        )
         report = await process_user_nicknames(
-            vox, user_nick, target[1:], compatibility_prompt + prediction_html_instruction
+            vox, user_nick, target[1:], manual_prompt
         )
         if report:
             await loading.edit_text(report, parse_mode=ParseMode.HTML, reply_markup=main_menu)
